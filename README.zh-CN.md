@@ -2,7 +2,7 @@
 
 <h1 align="center">适用于 DeepSeek Harness 的 rust-anything</h1>
 
-[**下载插件 3.3.1**](https://github.com/lonyness/dsh-rust-anything/releases/download/v3.3.1/dsh-rust-anything-3.3.1.tgz) · [更新记录](CHANGELOG.md) · [上游项目](https://github.com/erkamyaman/rust-anything)
+[**下载插件 3.3.2**](https://github.com/lonyness/dsh-rust-anything/releases/download/v3.3.2/dsh-rust-anything-3.3.2.tgz) · [更新记录](CHANGELOG.md) · [上游项目](https://github.com/erkamyaman/rust-anything)
 
 [English](README.md) · **简体中文**
 
@@ -12,13 +12,13 @@
 
 ## 安装组合包
 
-**插件 3.3.1 · 原生引擎 3.3.0。** 此版声明的 DSH 范围是 `>=0.2.2-rc.5 <0.3.0-0`，不是所有未来版本的实测保证。获取与所需插件版本匹配的 `.tgz`；从本源码打包请在仓库根目录运行 `npm pack --ignore-scripts`（无需安装 npm 依赖）。旧版发行包不含此修复。
+**插件 3.3.2 · 原生引擎 3.3.0。** 此版声明的 DSH 范围是 `>=0.2.2-rc.5 <0.3.0-0`，不是所有未来版本的实测保证。获取与所需插件版本匹配的 `.tgz`；从本源码打包请在仓库根目录运行 `npm pack --ignore-scripts`（无需安装 npm 依赖）。旧版发行包不含此修复。
 
 - **插件页：** 解压组合包，在「插件」页安装本地组合包，输入含 `package.json` 的目录绝对路径。
 - **DSH CLI：** 直接安装下载的压缩包。以下是 Windows 示例，请替换为自己的 profile 名称和文件绝对路径：
 
   ```powershell
-  dsh plugin --profile "my-profile" add "file:C:/Downloads/dsh-rust-anything-3.3.1.tgz"
+  dsh plugin --profile "my-profile" add "file:C:/Downloads/dsh-rust-anything-3.3.2.tgz"
   ```
 
 在「插件」页选中并启用组合包。如果当前 profile 未热加载，重启 DSH，再到目标项目打开新会话。无需运行 `rust-anything setup`，也不用替换 `PATH` 中的 CLI。
@@ -29,6 +29,8 @@
 | macOS 或 GNU/Linux（x64 / arm64） | 未内置。从[上游 v3.3.0 发布页](https://github.com/erkamyaman/rust-anything/releases/tag/v3.3.0) 下载对应架构的压缩包，用 [SHA256SUMS](https://github.com/erkamyaman/rust-anything/releases/download/v3.3.0/SHA256SUMS) 核对后，将 `DSH_RUST_ANYTHING_BIN` 设为可信可执行文件的绝对路径。请在启动 DSH 的环境中设置，不要指向目标项目提供的脚本。 |
 
 如需单独检查 Windows CLI，请在目标项目目录用**绝对路径**调用。`--version` 应输出 `rust-anything 3.3.0`；`--help` 可列出子命令。编译、录制和性能测量仍需目标项目自身的工具链和依赖。
+
+不要同时再配置一个名为 `rust-anything` 的官方 MCP 服务器：两者会发布相同的 `mcp__rust-anything__*` 工具名和 `mcp:rust-anything` 提示词段落，重复注册会失败。
 
 ## 从只读分析开始
 
@@ -51,7 +53,7 @@
 
 超时、取消或输出被截断，不代表没有写文件。先检查目标项目的录制、构建文件或报告，再决定是否提高限制并重跑。
 
-**从 3.3.0 升级：** 用新包在**原来的 profile** 执行上面的安装命令，然后重载插件。Windows x64 隔离配置实测会用 3.3.1 替换旧版，不重复注册组合包，也不替换系统 CLI。
+**从早期 3.3.x 升级：** 用新包在**原来的 profile** 执行上面的安装命令，然后重载插件。升级会替换组合包，不会重复注册，也不改动系统 CLI。
 
 ## 复测
 

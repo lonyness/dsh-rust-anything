@@ -2,7 +2,7 @@
 
 <h1 align="center">rust-anything for DeepSeek Harness</h1>
 
-[**Download plugin 3.3.1**](https://github.com/lonyness/dsh-rust-anything/releases/download/v3.3.1/dsh-rust-anything-3.3.1.tgz) · [Changelog](CHANGELOG.md) · [Upstream project](https://github.com/erkamyaman/rust-anything)
+[**Download plugin 3.3.2**](https://github.com/lonyness/dsh-rust-anything/releases/download/v3.3.2/dsh-rust-anything-3.3.2.tgz) · [Changelog](CHANGELOG.md) · [Upstream project](https://github.com/erkamyaman/rust-anything)
 
 **English** · [简体中文](README.zh-CN.md)
 
@@ -12,13 +12,13 @@ This is an **unofficial DSH integration** based on [erkamyaman/rust-anything](ht
 
 ## Install the bundle
 
-**Plugin 3.3.1 · native engine 3.3.0.** The declared DSH range is `>=0.2.2-rc.5 <0.3.0-0`, not a claim that every future build has been tested. Use a `.tgz` matching the desired **plugin** version, or run `npm pack --ignore-scripts` from this checkout (no npm dependencies required). Older release assets do not contain these fixes.
+**Plugin 3.3.2 · native engine 3.3.0.** The declared DSH range is `>=0.2.2-rc.5 <0.3.0-0`, not a claim that every future build has been tested. Use a `.tgz` matching the desired **plugin** version, or run `npm pack --ignore-scripts` from this checkout (no npm dependencies required). Older release assets do not contain these fixes.
 
 - **Plugins page:** Extract the archive. Install a local bundle using the absolute path of the directory containing `package.json`.
 - **DSH CLI:** Install the downloaded archive directly. Replace the profile and absolute path in this Windows example:
 
   ```powershell
-  dsh plugin --profile "my-profile" add "file:C:/Downloads/dsh-rust-anything-3.3.1.tgz"
+  dsh plugin --profile "my-profile" add "file:C:/Downloads/dsh-rust-anything-3.3.2.tgz"
   ```
 
 Select and enable the bundle in **Plugins**. If the profile does not reload it, restart DSH and open a new session in the target project. There is no need to run `rust-anything setup` or replace a CLI on your `PATH`.
@@ -29,6 +29,8 @@ Select and enable the bundle in **Plugins**. If the profile does not reload it, 
 | macOS or GNU/Linux (x64 / arm64) | Not included. Download the matching archive from [upstream v3.3.0](https://github.com/erkamyaman/rust-anything/releases/tag/v3.3.0), verify it against [SHA256SUMS](https://github.com/erkamyaman/rust-anything/releases/download/v3.3.0/SHA256SUMS), then set `DSH_RUST_ANYTHING_BIN` to the absolute path of the trusted executable in the environment that launches DSH. Do not point it at a project-supplied script. |
 
 To check the Windows CLI separately, run it by **absolute path** from the target project directory. `--version` should print `rust-anything 3.3.0`; `--help` lists the commands. Builds, recordings, and benchmarks still require the target project’s own toolchain and dependencies.
+
+Do not also add an official MCP server named `rust-anything`: it would publish the same `mcp__rust-anything__*` tool names and the `mcp:rust-anything` prompt section, and the duplicate registration fails.
 
 ## Try a read-only analysis
 
@@ -51,7 +53,7 @@ Set these in the **DSH host** environment and reload the plugin. Values must be 
 
 A timeout, cancellation or truncated response does not roll back project files. Inspect the recording, build or report before increasing a limit or retrying.
 
-**Upgrading from 3.3.0?** Use the same install command above with the new archive and the **same profile name**, then reload the plugin. In an isolated Windows x64 profile, this replaced 3.3.0 with 3.3.1 without duplicating the bundle or changing the system CLI.
+**Upgrading from an earlier 3.3.x?** Use the same install command above with the new archive and the **same profile name**, then reload the plugin. Upgrading replaces the bundle without duplicating it and does not change any system CLI.
 
 ## Verify
 

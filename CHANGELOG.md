@@ -1,5 +1,10 @@
 # Changelog
 
+## 3.3.2 — Plugin display and prompt sanitation (engine: rust-anything 3.3.0)
+
+- Add the bundle's Plugin Manager display resources: English and Chinese titles and descriptions, an original icon, and one-image detail pages. The descriptions state platform support, approval behavior, build prerequisites and limits.
+- Strip the standalone CLI install fallback from prompt-template output, matching the bundled skill, so neither channel tells the model to install or call the CLI. The upstream guide and prompt files on disk stay unchanged.
+
 ## 3.3.1 — DSH adapter update (engine: rust-anything 3.3.0)
 
 - Use native DSH tool registration without an external MCP-client package. The 22 upstream tools, two prompt templates, CLI and migration guides are retained.

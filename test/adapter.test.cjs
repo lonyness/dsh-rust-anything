@@ -80,6 +80,7 @@ test('apply registers the pinned catalog, both prompts, and a skill with a resol
     const value = await prompt.execute(args, exec);
     assert.match(value.messages[0].content.text, /toy repo/);
     assert.match(value.messages[0].content.text, match);
+    assert.doesNotMatch(value.messages[0].content.text, /If the MCP tools are not available/);
     assert.deepEqual(prompt.output.render(args, value), value.messages.map(m => m.content));
   }
   assert.equal(h.asked.length, 20, 'prompts are read-only');
@@ -187,6 +188,19 @@ test('text and structured values round-trip; errors throw with native text and s
   for (raw of [{}, { content: [{ type: 'image' }] }, { content: [text('bad flag')], isError: 'false' }]) {
     await assert.rejects(d.execute({}, exec), /invalid rust-anything 3.3.0 text result/);
   }
+});
+
+test('prompt text drops the standalone CLI fallback that DSH forbids', async t => {
+  const guide = 'Guide line\nIf the MCP tools are not available, use the CLI, install it and run `rust-anything setup`.\n\nAfter the fallback.';
+  const h = await install(t, { reply: () => ({ description: 'pinned', messages: [
+    { role: 'user', content: text(guide) },
+    { role: 'user', content: { type: 'image', data: 'x', mimeType: 'image/png' } },
+  ] }) });
+  const value = await h.tools.get('rust_anything_prompt').execute({ name: 'port_unit', path: '.' }, exec);
+  assert.equal(value.description, 'pinned');
+  assert.equal(value.messages[0].content.text, 'Guide line\nAfter the fallback.');
+  assert.deepEqual(value.messages[1].content, { type: 'image', data: 'x', mimeType: 'image/png' });
+  assert.equal(h.asked.length, 0);
 });
 
 test('invalid prompt name, path or unit is diagnosed before any subprocess starts', async t => {

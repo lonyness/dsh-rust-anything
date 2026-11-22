@@ -1,6 +1,6 @@
 {
   "name": "dsh-rust-anything",
-  "version": "3.3.1",
+  "version": "3.3.2",
   "description": "Native rust-anything migration tools and skills for DeepSeek Harness.",
   "license": "MIT",
   "type": "module",
@@ -8,6 +8,8 @@
   "exports": {
     ".": "./lib/index.js",
     "./cordis.patch.yml": "./cordis.patch.yml",
+    "./locale/*.json": "./locale/*.json",
+    "./icon": "./icon.svg",
     "./package.json": "./package.json"
   },
   "engines": {
@@ -21,6 +23,9 @@
   "files": [
     "cordis.patch.yml",
     "lib/*.js",
+    "locale/*.json",
+    "icon.svg",
+    "docs",
     "runtime/win32-x64/rust-anything.exe",
     "runtime/PROVENANCE.md",
     "skills/rust-anything/*.md",
