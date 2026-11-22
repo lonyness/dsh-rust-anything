@@ -12,7 +12,7 @@ This is an **unofficial DSH integration** based on [erkamyaman/rust-anything](ht
 
 ## Install the bundle
 
-**Plugin 3.3.2 · native engine 3.3.0.** The declared DSH range is `>=0.2.2-rc.5 <0.3.0-0`, not a claim that every future build has been tested. Use a `.tgz` matching the desired **plugin** version, or run `npm pack --ignore-scripts` from this checkout (no npm dependencies required). Older release assets do not contain these fixes.
+**Published plugin: 3.3.2 · this checkout: 3.3.3-rc.1 (local candidate) · native engine: 3.3.0.** The declared DSH range is `>=0.2.2-rc.5 <0.3.0-0`, not a claim that every build has been tested. Use the published `.tgz` above for stable, or the [verified pack procedure](runtime/PROVENANCE.md#maintainer-release-gate-from-the-checkout) for this candidate. Install the same file you verified, substituting its filename in the command below.
 
 - **Plugins page:** Extract the archive. Install a local bundle using the absolute path of the directory containing `package.json`.
 - **DSH CLI:** Install the downloaded archive directly. Replace the profile and absolute path in this Windows example:
@@ -28,7 +28,7 @@ Select and enable the bundle in **Plugins**. If the profile does not reload it, 
 | Windows x64 | Included at `runtime/win32-x64/rust-anything.exe`. The bundle ignores `DSH_RUST_ANYTHING_BIN` here. |
 | macOS or GNU/Linux (x64 / arm64) | Not included. Download the matching archive from [upstream v3.3.0](https://github.com/erkamyaman/rust-anything/releases/tag/v3.3.0), verify it against [SHA256SUMS](https://github.com/erkamyaman/rust-anything/releases/download/v3.3.0/SHA256SUMS), then set `DSH_RUST_ANYTHING_BIN` to the absolute path of the trusted executable in the environment that launches DSH. Do not point it at a project-supplied script. |
 
-To check the Windows CLI separately, run it by **absolute path** from the target project directory. `--version` should print `rust-anything 3.3.0`; `--help` lists the commands. Builds, recordings, and benchmarks still require the target project’s own toolchain and dependencies.
+On macOS/Linux, hash the extracted executable **once, before use**, and compare it with `executableSha256` for your platform in the [source manifest](runtime/upstream-v3.3.0.json) (`shasum -a 256` on macOS, `sha256sum` on Linux). The host checks the reported version and MCP identity/protocol for compatibility; a matching version string does **not** verify official bytes. The plugin neither downloads an engine nor rehashes it per call. To check the Windows CLI separately, use its **absolute path**; `--version` should print `rust-anything 3.3.0`. Builds, recordings, and benchmarks still require the target project’s own toolchain and dependencies.
 
 Do not also add an official MCP server named `rust-anything`: it would publish the same `mcp__rust-anything__*` tool names and the `mcp:rust-anything` prompt section, and the duplicate registration fails.
 
@@ -38,7 +38,7 @@ Do not also add an official MCP server named `rust-anything`: it would publish t
 
 Once you agree on the scope, record the original behavior, implement that unit in Rust, and replay the same cases. If the outputs differ, keep the original implementation active. See the [function and hotspot guide](skills/rust-anything/SKILL.md) or the [whole-app guide](skills/rust-anything/whole-app.md) for CLIs, HTTP services, and libraries.
 
-**Approvals.** DSH exposes native tools as `mcp__rust-anything__<upstream_name>`. The `analyze` and `map` tools and the two upstream prompts (via `rust_anything_prompt`) are read-only. The other 20 native tools require host approval because they can write files or run workloads. Under `never`, calls requiring approval are **denied**, not auto-approved. Do not retry them through the CLI. Recording and replay execute application code: only run them on projects you trust. SDK clients should use a normal `session/prompt` turn with host `approval/request` handling, not call mutating tool definitions directly outside a turn. Use upstream `go` for one hot-path migration pass or `gate` for a combined readiness check. A grant never carries over to another call.
+**Approvals.** DSH exposes native tools as `mcp__rust-anything__<upstream_name>`. Only the engine tools `analyze` and `map` can skip approval, and only with all three annotations: `readOnlyHint=true`, `destructiveHint=false`, `openWorldHint=false`. Other names (including unknown tools), missing hints and conflicting hints require a fresh grant; this includes the other 20 native tools today. Fetching the two prompt templates via `rust_anything_prompt` is read-only, not an engine tool execution. Under `never`, calls requiring approval are **denied**, not auto-approved. Do not retry them through the CLI. Recording and replay execute application code: only run them on projects you trust. SDK clients should use a normal `session/prompt` turn with host `approval/request` handling, not call mutating tool definitions directly outside a turn. Use upstream `go` for one hot-path migration pass or `gate` for a combined readiness check. A grant never carries over to another call.
 
 ## Limits for large projects
 

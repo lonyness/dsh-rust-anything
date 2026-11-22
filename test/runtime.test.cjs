@@ -231,7 +231,7 @@ test('missing sessions and sandbox denials never fall back to unsandboxed spawn'
   assert.equal(h.specs.length, 0);
 });
 
-test('Unix verifies the pinned executable inside each session before MCP, with one deadline for both processes', async t => {
+test('Unix checks the reported version before each session MCP call, with one deadline for both processes', async t => {
   const saved = Object.getOwnPropertyDescriptor(process, 'platform');
   Object.defineProperty(process, 'platform', { ...saved, value: 'linux' });
   t.after(() => Object.defineProperty(process, 'platform', saved));

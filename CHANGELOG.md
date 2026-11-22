@@ -1,5 +1,10 @@
 # Changelog
 
+## 3.3.3-rc.1 — Local candidate, not published (engine: rust-anything 3.3.0)
+
+- Pin both archive and executable digests for all five official release assets. The maintainer gate checks the raw Windows EXE before packing and again inside the final `.tgz`; runtime compatibility checks do not authenticate external macOS/Linux binaries.
+- Limit approval-free native calls to `analyze` and `map` **with** their expected safety annotations. Unknown tools and missing or conflicting hints require a fresh one-call grant. No upstream engine, guide or tool protocol changes.
+
 ## 3.3.2 — Plugin display and prompt sanitation (engine: rust-anything 3.3.0)
 
 - Add the bundle's Plugin Manager display resources: English and Chinese titles and descriptions, an original icon, and one-image detail pages. The descriptions state platform support, approval behavior, build prerequisites and limits.

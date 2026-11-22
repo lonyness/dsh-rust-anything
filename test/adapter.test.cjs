@@ -149,18 +149,29 @@ test('missing session, outside-turn SDK calls, never and non-grants cannot execu
   assert.equal(h.spawns.length, before, 'not even a native preflight may run');
 });
 
-test('only strict, consistent pinned annotations permit read-only execution (not the tool name)', async t => {
-  const bad = [undefined, null, {}, ...Object.keys(safe).flatMap(key => [
-    { ...safe, [key]: undefined }, { ...safe, [key]: String(safe[key]) }, { ...safe, [key]: !safe[key] },
-  ])];
-  const catalog = [entry('probe', safe), ...bad.map((v, i) => entry(i ? 'bad' + i : 'analyze', v))];
-  const h = await install(t, { catalog });
-  await h.tool('probe').execute({}, exec);
-  assert.equal(h.asked.length, 0);
+test('unknown and mutating names with all safe hints still need a one-call grant', async t => {
+  let decision = 'rejected';
+  const h = await install(t, { catalog: [entry('probe', safe), entry('go', safe)], decide: () => decision });
   const before = h.spawns.length;
-  for (const { name } of catalog.slice(1)) await assert.rejects(h.tool(name).execute({}, exec), /rejected/);
-  assert.equal(h.asked.length, bad.length);
+  for (const name of ['probe', 'go']) await assert.rejects(h.tool(name).execute({}, exec), /rejected.*Do not retry through a terminal/);
+  assert.deepEqual(h.asked.map(q => q.toolName), [prefix + 'probe', prefix + 'go']);
   assert.equal(h.spawns.length, before);
+  decision = 'allowed-once';
+  await h.tool('probe').execute({}, exec);
+  assert.equal(h.asked.length, 3);
+  assert.deepEqual(h.spawns.at(-1).params, { name: 'probe', arguments: {} });
+});
+
+test('analyze and map require approval if any safety hint is missing, mistyped or reversed', async t => {
+  for (const hints of [undefined, null, {}, ...Object.keys(safe).flatMap(key => [
+    { ...safe, [key]: undefined }, { ...safe, [key]: String(safe[key]) }, { ...safe, [key]: !safe[key] },
+  ])]) {
+    const h = await install(t, { catalog: [entry('analyze', hints), entry('map', hints)] });
+    const before = h.spawns.length;
+    for (const name of ['analyze', 'map']) await assert.rejects(h.tool(name).execute({}, exec), /rejected/);
+    assert.deepEqual(h.asked.map(q => q.toolName), [prefix + 'analyze', prefix + 'map']);
+    assert.equal(h.spawns.length, before);
+  }
 });
 
 test('text and structured values round-trip; errors throw with native text and structured diagnostics', async t => {

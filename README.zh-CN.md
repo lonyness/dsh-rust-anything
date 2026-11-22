@@ -12,7 +12,7 @@
 
 ## 安装组合包
 
-**插件 3.3.2 · 原生引擎 3.3.0。** 此版声明的 DSH 范围是 `>=0.2.2-rc.5 <0.3.0-0`，不是所有未来版本的实测保证。获取与所需插件版本匹配的 `.tgz`；从本源码打包请在仓库根目录运行 `npm pack --ignore-scripts`（无需安装 npm 依赖）。旧版发行包不含此修复。
+**已发布插件：3.3.2 · 本源码：3.3.3-rc.1（本地候选）· 原生引擎：3.3.0。** 此版声明的 DSH 范围是 `>=0.2.2-rc.5 <0.3.0-0`，不是所有版本的实测保证。稳定版使用上方下载链接；本候选按[发布包核验步骤](runtime/PROVENANCE.md#maintainer-release-gate-from-the-checkout)打包。安装时把下方示例文件名换成校验通过的实际文件，不要再重新打包。
 
 - **插件页：** 解压组合包，在「插件」页安装本地组合包，输入含 `package.json` 的目录绝对路径。
 - **DSH CLI：** 直接安装下载的压缩包。以下是 Windows 示例，请替换为自己的 profile 名称和文件绝对路径：
@@ -28,7 +28,7 @@
 | Windows x64 | 已内置于 `runtime/win32-x64/rust-anything.exe`。此平台不使用 `DSH_RUST_ANYTHING_BIN`。 |
 | macOS 或 GNU/Linux（x64 / arm64） | 未内置。从[上游 v3.3.0 发布页](https://github.com/erkamyaman/rust-anything/releases/tag/v3.3.0) 下载对应架构的压缩包，用 [SHA256SUMS](https://github.com/erkamyaman/rust-anything/releases/download/v3.3.0/SHA256SUMS) 核对后，将 `DSH_RUST_ANYTHING_BIN` 设为可信可执行文件的绝对路径。请在启动 DSH 的环境中设置，不要指向目标项目提供的脚本。 |
 
-如需单独检查 Windows CLI，请在目标项目目录用**绝对路径**调用。`--version` 应输出 `rust-anything 3.3.0`；`--help` 可列出子命令。编译、录制和性能测量仍需目标项目自身的工具链和依赖。
+macOS/Linux 在首次使用前对**解压后的文件**算一次 SHA-256（macOS 用 `shasum -a 256`，Linux 用 `sha256sum`），与[来源清单](runtime/upstream-v3.3.0.json)中本平台的 `executableSha256` 比对。宿主检查程序自报的版本、MCP 身份和协议，只证明**版本兼容**，不证明是官方文件；插件不下载引擎，也不在每次调用时重复哈希。Windows 如需单独检查，请用**绝对路径**调用，`--version` 应输出 `rust-anything 3.3.0`。编译、录制和性能测量仍需目标项目自身的工具链和依赖。
 
 不要同时再配置一个名为 `rust-anything` 的官方 MCP 服务器：两者会发布相同的 `mcp__rust-anything__*` 工具名和 `mcp:rust-anything` 提示词段落，重复注册会失败。
 
@@ -38,7 +38,7 @@
 
 确认范围后，先录制原实现的行为，再编写这个单元的 Rust 版本，回放同一组用例。输出不一致时，继续使用原实现。单个函数或热点参见[函数迁移指南](skills/rust-anything/SKILL.md)；CLI、HTTP 服务和库参见[整应用迁移指南](skills/rust-anything/whole-app.md)。
 
-**审批规则。** DSH 中的原生工具名为 `mcp__rust-anything__<上游名称>`。`analyze`、`map` 和两个上游提示词（通过 `rust_anything_prompt` 读取）均为只读。其余 20 个原生工具可能写文件或执行工作负载，必须获得宿主批准。策略为 `never` 时，需要审批的调用会被**拒绝**，不是自动批准；不要改用 CLI 绕过拒绝。录制和回放会运行应用代码，只对可信项目执行。 SDK 自动化请通过正常的 `session/prompt` 轮次调用写入工具，并接入宿主 `approval/request`；不要在轮次外直接调用 `execute`。对一个工作负载的热点迁移，可用原生 `go` 在一次授权调用中执行一轮；`gate` 可合并就绪检查。单次许可不延续到下一调用。
+**审批规则。** DSH 中的原生工具名为 `mcp__rust-anything__<上游名称>`。在引擎工具中，只有 `analyze` 和 `map` 且上游三个标记同时为 `readOnlyHint=true`、`destructiveHint=false`、`openWorldHint=false` 才免审批。名称未知、标记缺失或不一致时一律走现有单次审批；当前其余 20 个工具均须批准。两个提示模板通过只读的 `rust_anything_prompt` 获取，不是引擎工具执行。策略为 `never` 时，需要审批的调用会被**拒绝**，不是自动批准；不要改用 CLI 绕过拒绝。录制和回放会运行应用代码，只对可信项目执行。 SDK 自动化请通过正常的 `session/prompt` 轮次调用写入工具，并接入宿主 `approval/request`；不要在轮次外直接调用 `execute`。对一个工作负载的热点迁移，可用原生 `go` 在一次授权调用中执行一轮；`gate` 可合并就绪检查。单次许可不延续到下一调用。
 
 ## 大项目的资源限制
 

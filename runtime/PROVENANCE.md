@@ -3,9 +3,22 @@
 [Release v3.3.0](https://github.com/erkamyaman/rust-anything/releases/tag/v3.3.0) points to [commit c0862b8696b51779f4b32d16ad57b3601f75fb12](https://github.com/erkamyaman/rust-anything/commit/c0862b8696b51779f4b32d16ad57b3601f75fb12).
 
 The [Windows x64 ZIP](https://github.com/erkamyaman/rust-anything/releases/download/v3.3.0/rust-anything-v3.3.0-x86_64-pc-windows-msvc.zip) (5,307,263 bytes) matched the publisher's [SHA256SUMS](https://github.com/erkamyaman/rust-anything/releases/download/v3.3.0/SHA256SUMS) before extraction: `9974932da25ee4cbb1a50ded3e57b2f2a9d0c089691bc64f666c38eb03802b9b`.
-Only the unmodified archive member `rust-anything-v3.3.0-x86_64-pc-windows-msvc/rust-anything.exe` is bundled. Its `--version` returned `rust-anything 3.3.0` (exit 0).
+Only the unmodified archive member `rust-anything-v3.3.0-x86_64-pc-windows-msvc/rust-anything.exe` is bundled. The [machine-readable pins](upstream-v3.3.0.json) identify all five platform/architecture pairs, the exact archive and executable member, and **separate SHA-256s** for the compressed file and extracted bytes. Each archive was downloaded from that tag and checked against the publisher’s `SHA256SUMS` before hashing its executable. A runtime `--version`/MCP handshake checks compatibility, **not** official file identity. On macOS/Linux, verify the archive and extracted executable against the matching pins before setting the explicit absolute path; the plugin does not download, search `PATH` or hash it per call.
 
-The official v3.3.0 binaries do not render identical prompt text on every OS. The [upstream prompt renderer](https://github.com/erkamyaman/rust-anything/blob/c0862b8696b51779f4b32d16ad57b3601f75fb12/src/mcp_prompts.rs#L33-L79) removes YAML front matter from LF guides, but not the CRLF guide embedded in the Windows binary. The adapter passes both through unchanged; the [protocol snapshots](../test/upstream-v3.3.0.json) pin complete Windows and Unix responses separately.
+## Maintainer release gate (from the checkout)
+
+With GitHub CLI, Python 3.9+ and npm, use a fresh destination. You can also supply an existing directory containing the exact five official archives and `SHA256SUMS`; the checker itself is offline. On Windows use `py -3` in place of `python3`.
+
+```sh
+gh release download v3.3.0 -R erkamyaman/rust-anything -D ../official-3.3.0
+python3 test/verify_release.py ../official-3.3.0 --pack-to ../candidate
+# Recheck the exact file intended for installation/release; do not repack after this.
+python3 test/verify_release.py ../official-3.3.0 --tgz ../candidate/dsh-rust-anything-3.3.3-rc.1.tgz
+```
+
+The gate compares `SHA256SUMS`, each archive and its member with the pins, and checks the Windows EXE in the checkout **before** `npm pack --ignore-scripts`. It then opens the actual `.tgz`, checks its Windows EXE, provenance and package identity, and only then moves it out of staging and prints its SHA-256. Any mismatch exits nonzero: do not distribute a raw `npm pack` or a different file. This is a byte comparison against the pinned publisher release, not a claim of independent code signing.
+
+The official v3.3.0 binaries do not render identical prompt text on every OS. The [upstream prompt renderer](https://github.com/erkamyaman/rust-anything/blob/c0862b8696b51779f4b32d16ad57b3601f75fb12/src/mcp_prompts.rs#L33-L79) removes YAML front matter from LF guides, but not the CRLF guide embedded in the Windows binary. The [protocol snapshots](../test/upstream-v3.3.0.json) pin these original Windows and Unix responses separately, before the DSH adapter removes the standalone CLI fallback.
 
 | Bundled path | Upstream source | SHA-256 |
 |---|---|---|
