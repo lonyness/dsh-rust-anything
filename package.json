@@ -1,6 +1,6 @@
 {
   "name": "dsh-rust-anything",
-  "version": "3.3.0",
+  "version": "3.3.1",
   "description": "Native rust-anything migration tools and skills for DeepSeek Harness.",
   "license": "MIT",
   "type": "module",
@@ -11,15 +11,12 @@
     "./package.json": "./package.json"
   },
   "engines": {
-    "dsh": "0.2.2-rc.5"
+    "dsh": ">=0.2.2-rc.5 <0.3.0-0"
   },
   "dsh": {
     "bundle": {
       "patch": "./cordis.patch.yml"
     }
-  },
-  "peerDependencies": {
-    "@deepseek-ai/dsh-mcp-client": "0.2.2-rc.5"
   },
   "files": [
     "cordis.patch.yml",
@@ -31,6 +28,7 @@
     "test/upstream-v3.3.0.json",
     "README.md",
     "README.zh-CN.md",
+    "CHANGELOG.md",
     "LICENSE"
   ],
   "scripts": {

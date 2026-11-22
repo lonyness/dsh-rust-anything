@@ -1,0 +1,43 @@
+name: Test
+on: [push, pull_request]
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest, macos-latest]
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '22'
+      - name: Verify and extract upstream rust-anything v3.3.0
+        if: runner.os != 'Windows'
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Archive SHA256s from the upstream v3.3.0 release's SHA256SUMS.
+          case "$RUNNER_OS-$RUNNER_ARCH" in
+            Linux-X64)   target=x86_64-unknown-linux-gnu;  sha=e0b3456a9b1a6ae2f1205397815f21f3797be1e3ca505985d5ae9e054ee5dcc0 ;;
+            Linux-ARM64) target=aarch64-unknown-linux-gnu; sha=a56790fbc6a0615deb969b272ce53114d66032da462f061818cf6206513d4b02 ;;
+            macOS-X64)   target=x86_64-apple-darwin;       sha=0d96dc91c952db24f831b2ed36d295a0db7aad0df39bc4c95f3beb696774f2ca ;;
+            macOS-ARM64) target=aarch64-apple-darwin;      sha=a39bf2b336a5e4030560dba68906fb089a10f61ac9d5b12dde4269bf679ae1da ;;
+            *) echo "Unsupported runner: $RUNNER_OS-$RUNNER_ARCH" >&2; exit 1 ;;
+          esac
+          cd "$(mktemp -d "$RUNNER_TEMP/rust-anything.XXXXXX")"
+          dir="rust-anything-v3.3.0-$target"
+          curl --proto '=https' --fail --location --silent --show-error --retry 3 \
+            -o "$dir.tar.gz" "https://github.com/erkamyaman/rust-anything/releases/download/v3.3.0/$dir.tar.gz"
+          printf '%s  %s\n' "$sha" "$dir.tar.gz" | shasum -a 256 -c -
+          tar -xzf "$dir.tar.gz" "$dir/rust-anything"
+          test -x "$dir/rust-anything"
+          echo "DSH_RUST_ANYTHING_BIN=$PWD/$dir/rust-anything" >> "$GITHUB_ENV"
+      - run: npm test

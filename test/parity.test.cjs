@@ -1,12 +1,14 @@
-// Windows x64; node --test test/parity.test.cjs. The workflow needs an installed rustc + linker, not Cargo or npm.
+// Needs rustc + a linker. On Unix, set DSH_RUST_ANYTHING_BIN to the trusted v3.3.0 executable.
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const { spawnSync } = require('node:child_process');
 const { createHash } = require('node:crypto');
 const fs = require('node:fs');
-const { join, resolve } = require('node:path');
+const { join } = require('node:path');
 const snapshot = require('./upstream-v3.3.0.json');
-const exe = resolve(__dirname, '../runtime/win32-x64/rust-anything.exe');
+const suffix = process.platform === 'win32' ? '.exe' : '';
+let exe;
+test.before(async () => { exe = (await import('../lib/runtime.js')).runtimePath(); });
 
 function fixture(t) {
   const root = fs.mkdtempSync(join(__dirname, '.parity-'));
@@ -14,8 +16,8 @@ function fixture(t) {
   return root;
 }
 
-function run(cwd, command, args, input) {
-  const env = { ...process.env, TEMP: cwd, TMP: cwd, TMPDIR: cwd, RUSTUP_AUTO_INSTALL: '0' };
+function run(cwd, command, args, input, extraEnv) {
+  const env = { ...process.env, TEMP: cwd, TMP: cwd, TMPDIR: cwd, RUSTUP_AUTO_INSTALL: '0', ...extraEnv };
   const p = spawnSync(command, args, { cwd, env, input, encoding: 'utf8', windowsHide: true, timeout: 60000 });
   if (p.error) throw p.error;
   assert.equal(p.status, 0, command + ': ' + p.stderr);
@@ -58,12 +60,14 @@ function hash(value) {
 
 test('v3.3.0 stdio: full advertised tool and prompt contracts, including argument substitution', t => {
   const cwd = fixture(t);
+  assert.equal(run(cwd, exe, ['--version']).trim(), 'rust-anything 3.3.0');
   const init = rpc(cwd, 'initialize', { protocolVersion: '2025-06-18', capabilities: {}, clientInfo: { name: 'parity', version: '1' } }).result;
   assert.deepEqual(init.serverInfo, { name: 'rust-anything', version: '3.3.0' });
   assert.equal(init.protocolVersion, '2025-06-18');
   assert.deepEqual(init.capabilities, { tools: {}, prompts: {} });
   assert.deepEqual(rpc(cwd, 'ping').result, {});
   const list = rpc(cwd, 'tools/list').result;
+  assert.equal(list.tools.length, 22);
   assert.deepEqual(list.tools.map(x => x.name), Object.keys(snapshot.schemas));
   for (const x of list.tools) assert.equal(hash(x.inputSchema), snapshot.schemas[x.name], x.name);
   assert.equal(hash(list), snapshot.toolList, 'catalog descriptions, annotations, schemas and ordering');
@@ -100,7 +104,7 @@ test('protocol errors are distinct from structured tool errors', t => {
   }
 });
 
-test('app_record -> app_replay: distinguish Unicode scalar count from UTF-8 byte length', t => {
+test('app_record -> app_front_door fallback -> app_replay: distinguish Unicode scalars from UTF-8 bytes', t => {
   const cwd = fixture(t);
   const repo = join(cwd, 'toy repo');
   fs.mkdirSync(repo);
@@ -116,11 +120,27 @@ test('app_record -> app_replay: distinguish Unicode scalar count from UTF-8 byte
   for (const [name, n] of [['ascii', 3], ['unicode', 2]]) {
     assert.equal(fs.readFileSync(join(cases, name + '.stdout'), 'utf8').trimEnd(), String(n));
   }
+  // Exercise the generated fallback without fetching clap or counting the scaffold itself as a pass.
+  const app = join(repo, 'rust', 'app');
+  const door = tool(cwd, 'app_front_door', { repo, check: false });
+  assert.ok(door.files.includes('src/original.rs'));
+  const driver = `#[path="src/original.rs"] mod original;
+fn main() -> std::process::ExitCode {
+    original::report_fallbacks();
+    original::run(&std::env::args_os().skip(1).collect::<Vec<_>>())
+}`;
+  run(app, 'rustc', ['--edition=2024', '-', '-o', join(repo, 'fallback' + suffix)], driver,
+    { CARGO_MANIFEST_DIR: app, RUST_ANYTHING_REPO: repo });
+  const fallback = tool(cwd, 'app_replay', { repo, build: './fallback' + suffix, timeout: 10 });
+  assert.deepEqual([fallback.passed, fallback.total, fallback.skipped, fallback.failures], [2, 2, 0, []]);
+  assert.deepEqual(fallback.fallback.names.toSorted(), ['ascii', 'unicode']);
+  t.diagnostic('Generated front-door fallback: 2/2 recorded cases passed via the original.');
+
   // Same interface and exit code for both native builds. Only the counting rule changes.
   for (const [name, count] of [['correct', 's.chars().count()'], ['different', 's.len()']]) {
     fs.writeFileSync(join(repo, 'count.rs'), 'fn main() { let s = std::env::args().nth(1).unwrap(); println!("{}", ' + count + '); }\n');
-    run(cwd, 'rustc', [join(repo, 'count.rs'), '-o', join(repo, name + '.exe')]);
-    const replay = tool(cwd, 'app_replay', { repo, build: name + '.exe', timeout: 10 });
+    run(cwd, 'rustc', [join(repo, 'count.rs'), '-o', join(repo, name + suffix)]);
+    const replay = tool(cwd, 'app_replay', { repo, build: './' + name + suffix, timeout: 10 });
     assert.equal(replay.total, 2);
     assert.equal(replay.skipped, 0);
     if (name === 'correct') {
