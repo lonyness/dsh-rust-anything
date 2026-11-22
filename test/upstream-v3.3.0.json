@@ -26,9 +26,17 @@
     "app_lift": "62817539433211f4cac4f04fdbb555c6a6e011e798ae16bccb097f46cc9ce022"
   },
   "promptList": "85e41edf678fe4bb5c61e005fadd738be6059fd1223e043b6942ed8833c56add",
-  "promptResults": [
-    "3ee84fccd090ac8abd2ebd870864adbd58f2df777e560cd88fae38f93ab6a493",
-    "7549764c98d873dfa530266c3bce7cf4804bfbac66a77a78844768dc877f23e8",
-    "77be5ff564026ae8b3b7cb0fe08075f7530750fbcfec08efd600df6c9d389a4a"
-  ]
+  "unixPromptSource": "https://github.com/erkamyaman/rust-anything/blob/c0862b8696b51779f4b32d16ad57b3601f75fb12/src/mcp_prompts.rs#L33-L79 rendered with the LF versions of its two include_str! Markdown files",
+  "promptResults": {
+    "win32": [
+      "3ee84fccd090ac8abd2ebd870864adbd58f2df777e560cd88fae38f93ab6a493",
+      "7549764c98d873dfa530266c3bce7cf4804bfbac66a77a78844768dc877f23e8",
+      "77be5ff564026ae8b3b7cb0fe08075f7530750fbcfec08efd600df6c9d389a4a"
+    ],
+    "unix": [
+      "9bc57b45ad37bacee123dffe05eef6b2ad2914b189a44fb49fb7d7bce58fb0c0",
+      "7ae7602ba57f0720829a7cce4a53109fab3a6de8eeeb383d50156539e5cbea5c",
+      "b1e5b6ba81775aa2718edf10681ee5770896e844f89d953d3c9b389f50fb5096"
+    ]
+  }
 }

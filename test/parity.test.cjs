@@ -79,11 +79,14 @@ test('v3.3.0 stdio: full advertised tool and prompt contracts, including argumen
     ['port_unit', { path: 'toy repo', unit: 'math.ts' }, /math\.ts/],
     ['port_whole_app', { path: 'toy repo' }, /pure Rust app/]
   ];
+  // Upstream embeds CRLF guides on Windows; its LF-only body() leaves SKILL.md front matter there.
+  // Pin each release's full response rather than stripping that real content difference.
+  const expected = snapshot.promptResults[process.platform === 'win32' ? 'win32' : 'unix'];
   examples.forEach(([name, args, match], i) => {
     const prompt = rpc(cwd, 'prompts/get', { name, arguments: args }).result;
     assert.match(prompt.messages[0].content.text, /toy repo/);
     assert.match(prompt.messages[0].content.text, match);
-    assert.equal(hash(prompt), snapshot.promptResults[i], name + ' full rendered response');
+    assert.equal(hash(prompt), expected[i], name + ' full rendered response');
   });
 });
 

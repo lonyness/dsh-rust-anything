@@ -5,6 +5,8 @@
 The [Windows x64 ZIP](https://github.com/erkamyaman/rust-anything/releases/download/v3.3.0/rust-anything-v3.3.0-x86_64-pc-windows-msvc.zip) (5,307,263 bytes) matched the publisher's [SHA256SUMS](https://github.com/erkamyaman/rust-anything/releases/download/v3.3.0/SHA256SUMS) before extraction: `9974932da25ee4cbb1a50ded3e57b2f2a9d0c089691bc64f666c38eb03802b9b`.
 Only the unmodified archive member `rust-anything-v3.3.0-x86_64-pc-windows-msvc/rust-anything.exe` is bundled. Its `--version` returned `rust-anything 3.3.0` (exit 0).
 
+The official v3.3.0 binaries do not render identical prompt text on every OS. The [upstream prompt renderer](https://github.com/erkamyaman/rust-anything/blob/c0862b8696b51779f4b32d16ad57b3601f75fb12/src/mcp_prompts.rs#L33-L79) removes YAML front matter from LF guides, but not the CRLF guide embedded in the Windows binary. The adapter passes both through unchanged; the [protocol snapshots](../test/upstream-v3.3.0.json) pin complete Windows and Unix responses separately.
+
 | Bundled path | Upstream source | SHA-256 |
 |---|---|---|
 | `runtime/win32-x64/rust-anything.exe` | ZIP member above | `7cf46ddfcc987f3ccd5bb501130254b765fb3690b0494ba1a65b84f872254183` |
