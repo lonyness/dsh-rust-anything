@@ -1,0 +1,54 @@
+{
+  "name": "dsh-rust-anything",
+  "version": "3.3.0",
+  "description": "Native rust-anything migration tools and skills for DeepSeek Harness.",
+  "license": "MIT",
+  "type": "module",
+  "main": "./lib/index.js",
+  "exports": {
+    ".": "./lib/index.js",
+    "./cordis.patch.yml": "./cordis.patch.yml",
+    "./package.json": "./package.json"
+  },
+  "engines": {
+    "dsh": "0.2.2-rc.5"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  },
+  "peerDependencies": {
+    "@deepseek-ai/dsh-mcp-client": "0.2.2-rc.5"
+  },
+  "files": [
+    "cordis.patch.yml",
+    "lib/*.js",
+    "runtime/win32-x64/rust-anything.exe",
+    "runtime/PROVENANCE.md",
+    "skills/rust-anything/*.md",
+    "test/*.test.cjs",
+    "test/upstream-v3.3.0.json",
+    "README.md",
+    "README.zh-CN.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "test": "node --test test/*.test.cjs"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/lonyness/dsh-rust-anything.git"
+  },
+  "homepage": "https://github.com/lonyness/dsh-rust-anything#readme",
+  "bugs": {
+    "url": "https://github.com/lonyness/dsh-rust-anything/issues"
+  },
+  "keywords": [
+    "dsh-plugin",
+    "deepseek-harness",
+    "rust",
+    "code-migration",
+    "mcp"
+  ]
+}
