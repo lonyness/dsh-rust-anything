@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { spawn, spawnSync } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
 import { once } from 'node:events';
-import { closeSync, constants, copyFileSync, existsSync, lstatSync, openSync, readFileSync, readdirSync, realpathSync, writeFileSync, writeSync } from 'node:fs';
+import { closeSync, constants, copyFileSync, existsSync, lstatSync, mkdirSync, openSync, readFileSync, readdirSync, realpathSync, writeFileSync, writeSync } from 'node:fs';
 import { basename, dirname, isAbsolute, join, relative, sep } from 'node:path';
 import { Writable } from 'node:stream';
 import { pathToFileURL } from 'node:url';
@@ -14,6 +14,8 @@ assert.ok(process.versions.electron && process.platform==='win32' && process.arc
 assert.ok(isAbsolute(archive) && /\.tgz$/i.test(archive) && /^[0-9a-f]{64}$/.test(expectedHash));
 assert.equal(home,join(root,'home')); assert.ok(!existsSync(home),'refusing an existing home');
 const repo = join(root,'样例 é🦀'), cases = join(repo,'rust','app-cases'), report = join(cases,'replay-report.md');
+const probe=join(repo,'cache-probe'), target=join(probe,'.rust-anything','target'), userCache=join(process.env.LOCALAPPDATA,'rust-anything','target');
+assert.equal(process.env.LOCALAPPDATA,join(root,'user','AppData','Local')); assert.equal(process.env.CARGO_TARGET_DIR,undefined);
 assert.equal(realpathSync(process.cwd()),realpathSync(repo)); assert.equal(readdirSync(repo).length,0);
 const packages = join(dirname(process.execPath),'resources','app.asar','dsh','node_modules','@deepseek-ai');
 const cli = ['--expose-internals',join(packages,'dsh-desktop-host','lib','cli.js')];
@@ -57,14 +59,34 @@ function turnProof(s, events) {
     assert.ok(call.seq<asked[0].seq && asked[0].seq<decided[0].seq && decided[0].seq<result.seq);
   }
   const error=result.data.message.isError===true, payload=result.data.message.content.map(b=>b.text??'').join('\n');
-  assert.equal(error,s.outcome==='rejected',`${s.phase}: ${payload.slice(0,1200)}`);
-  if(error) assert.match(payload,/rejected/i); // Not a protocol/unavailable/sandbox error standing in for a rejection.
+  const missing=s.phase==='replay-missing', invalid=s.phase.startsWith('replay-invalid-');
+  if(!missing) assert.equal(error,s.outcome==='rejected' || invalid,`${s.phase}: ${payload.slice(0,1200)}`);
+  if(s.outcome==='rejected') assert.match(payload,/approval rejected/i);
+  if(invalid) { assert.match(payload,/app_replay/i); assert.match(payload,/\bbuild\b/i); assert.match(payload,/\bstring\b/i); }
   if(s.phase==='skill') assert.match(payload,/mcp__rust-anything__/);
   if(s.phase==='prompt'){assert.ok(payload.includes(repo)); assert.match(payload,/count_symbols/);}
   if(s.phase==='analyze') assert.match(payload,/counter\.py/);
   if(s.phase==='record-allow'){const r=JSON.parse(payload); assert.equal(r.cases,2); assert.equal(r.inputs,2); assert.deepEqual([r.noisy,r.unstable,r.timed_out],[[],[],[]]);}
-  if(s.phase==='replay-allow'){const r=JSON.parse(payload); assert.deepEqual([r.passed,r.total,r.skipped,r.failures],[2,2,0,[]]);}
-  return {phase:s.phase,turn:start.data.turn,callId:s.callId,tool:s.name,seq:[start.seq,call.seq,...asked.map(e=>e.seq),...decided.map(e=>e.seq),result.seq,end.seq],approval:asked[0]?.data.id??null,outcome:s.outcome??null,error};
+  let replay;
+  if(missing && error){
+    assert.ok(payload.includes(s.args.build),payload); assert.match(payload,/os error [23]\b|ENOENT|cannot find|not found|does not exist|no such file|找不到/i);
+  } else if(missing || s.phase==='replay-allow') {
+    replay=JSON.parse(payload); assert.deepEqual(replay.build,[s.args.build]);
+    assert.deepEqual([replay.passed,replay.total,replay.skipped,replay.fallback],[missing?0:2,2,0,null]);
+    if(missing){ // A successful transport with two failed cases is NOT a successful replay.
+      assert.deepEqual(replay.failures.map(f=>f.case).sort(),['ascii','unicode']);
+      for(const f of replay.failures) assert.ok(f.problems.some(p=>p.field && p.detail?.trim()),`no diagnostic for ${f.case}`);
+    } else assert.deepEqual(replay.failures,[]);
+  }
+  let cache;
+  if(s.phase==='cache-build'){
+    const {artifact}=JSON.parse(payload), owner=json(join(target,'owners.json')).sdk_probe;
+    assert.equal(realpathSync.native(owner),realpathSync.native(probe)); assert.ok(lstatSync(join(target,'owners.lock')).isFile());
+    assert.equal(realpathSync.native(artifact),realpathSync.native(join(probe,'target','release','sdk_probe.dll')));
+    const dll=readFileSync(artifact); assert.equal(dll.toString('ascii',0,2),'MZ'); assert.deepEqual(readFileSync(join(target,'release','sdk_probe.dll')),dll);
+    assert.ok(!existsSync(userCache),'outside-workspace user cache was created'); cache={target,owner,artifact,sha256:sha(dll),absent:userCache};
+  }
+  return {phase:s.phase,turn:start.data.turn,callId:s.callId,tool:s.name,seq:[start.seq,call.seq,...asked.map(e=>e.seq),...decided.map(e=>e.seq),result.seq,end.seq],approval:asked[0]?.data.id??null,outcome:s.outcome??null,error,replay,cache,diagnostic:error?payload:undefined};
 }
 async function main(){
   const staged=join(root,'candidate.tgz'); copyFileSync(archive,staged,constants.COPYFILE_EXCL);
@@ -81,6 +103,11 @@ async function main(){
   writeFileSync(join(repo,'count.cjs'),`require('node:fs').appendFileSync(require('node:path').join(__dirname,'original-runs.jsonl'),JSON.stringify(process.argv.slice(2))+'\\n');\nconsole.log(Array.from(process.argv[2]).length);\n`);
   writeFileSync(join(repo,'inputs.jsonl'),[{name:'ascii',args:['abc']},{name:'unicode',args:['é🦀']}].map(v=>JSON.stringify(v)).join('\n')+'\n');
   writeFileSync(join(repo,'count.rs'),`use std::io::Write;\nfn main(){ let s=std::env::args().nth(1).unwrap(); let trace=std::env::current_exe().unwrap().parent().unwrap().join("rust-runs.txt"); writeln!(std::fs::OpenOptions::new().append(true).create(true).open(trace).unwrap(), "{}", s).unwrap(); println!("{}",s.chars().count()); }\n`);
+  // A dependency-free C ABI fixture. Only the approved SDK build may create its target or DLL.
+  mkdirSync(probe); writeFileSync(join(probe,'Cargo.toml'),'[package]\nname="sdk_probe"\nversion="0.1.0"\nedition="2021"\n[lib]\npath="lib.rs"\ncrate-type=["cdylib"]\n');
+  writeFileSync(join(probe,'probe.c'),'int probe(void) { return 1; }\n');
+  writeFileSync(join(probe,'lib.rs'),'#[no_mangle] pub extern "C" fn probe() -> i32 { 1 }\n');
+  writeFileSync(join(probe,'rust-anything.json'),JSON.stringify({schema:'rust-anything/bridge@1',root:'.',unit:'probe.c',language:'c',kind:'c-abi',crate_name:'sdk_probe',exports:[{name:'probe',file:'probe.c',line:1,params:[],returns:'int',is_async:false,native_return:'int'}]}));
   run('compile',rustc,['count.rs','-o','correct.exe']); // build only; do not execute either sample before its approval
   assert.ok(!existsSync(cases) && !existsSync(join(repo,'original-runs.jsonl')) && !existsSync(join(repo,'rust-runs.txt')));
   run('profile-init',process.execPath,[...cli,'--profile','sdk','--dump-default-config']);
@@ -110,7 +137,7 @@ async function main(){
   rpc.onRequest(async(method,p)=>{
     // Bind to an actual DSH-emitted call (full arguments, not substrings of reason) in the one open phase and session.
     try {
-      assert.equal(method,'approval/request'); assert.equal(p.sessionId,sessionId); assert.ok(active?.outcome);
+      assert.equal(method,'approval/request'); assert.equal(p.sessionId,sessionId); assert.ok(active?.outcome,`${active?.phase}: unexpected approval/request for ${p.toolName}`);
       assert.equal(p.callId,active.callId); assert.equal(p.toolName,active.name); assert.equal(numAnswered,0); assert.ok(!anomaly);
       const calls=phaseEvents.filter(e=>e.type==='tool/call'); assert.equal(calls.length,1); const c=calls[0].data;
       assert.equal(c.callId,p.callId); assert.equal(c.name,p.toolName); assert.deepEqual(JSON.parse(c.arguments),active.args);
@@ -124,12 +151,23 @@ async function main(){
     const init=await ask('initialize',{provider,model,cwd:repo,approvalRequests:true}); assert.equal(init.serverInfo.name,'deepseek-harness-sdk-runtime'); save('initialize.json',init);
     const where=await ask('session/working-directory/get',{sessionId}); assert.equal(realpathSync(where.cwd),realpathSync(repo));
     for(const s of steps){
-      active=s; phaseEvents=[]; numAnswered=0; const denied=s.outcome==='rejected', before=denied?snapshot():null;
-      if(denied) save(s.phase+'-before.json',before);
+      active=s; phaseEvents=[]; numAnswered=0; const untouched=s.outcome==='rejected' || s.phase.startsWith('replay-invalid-');
+      const before=untouched || s.phase.startsWith('replay-') ? snapshot() : null;
+      if(before) save(s.phase+'-before.json',before);
+      if(s.phase==='replay-missing') assert.ok(!existsSync(join(repo,s.args.build)),'missing target exists');
+      if(s.phase==='cache-build') assert.ok(![target,join(probe,'target'),userCache].some(existsSync),'cache probe must start cold');
       const receipt=await ask('session/prompt',{sessionId,contentBlocks:[{type:'text',text:s.prompt}]}); assert.ok(receipt.messageId);
-      await ask('session/wait',{sessionId}); active=undefined; if(anomaly) throw anomaly;
+      await ask('session/wait',{sessionId}); active=undefined;
+      if(before){
+        const after=snapshot(); save(s.phase+'-after.json',after);
+        if(untouched) assert.deepEqual(after,before,`${s.phase} changed the sample tree`);
+        else {
+          assert.deepEqual(after['original-runs.jsonl'],before['original-runs.jsonl'],`${s.phase} launched the original`);
+          if(s.phase==='replay-missing') assert.deepEqual(after['rust-runs.txt'],before['rust-runs.txt'],'missing target launched Rust');
+        }
+      }
+      if(anomaly) throw anomaly;
       assert.equal(numAnswered,s.outcome?1:0); const proof=turnProof(s,phaseEvents);
-      if(denied){const after=snapshot(); save(s.phase+'-after.json',after); assert.deepEqual(after,before,'a rejected call changed the sample tree');}
       if(s.phase==='record-deny'){assert.ok(!existsSync(join(repo,'rust')) && !existsSync(join(repo,'original-runs.jsonl')) && !existsSync(join(repo,'rust-runs.txt')));}
       if(s.phase==='record-allow'){
         const runs=text(join(repo,'original-runs.jsonl')).trimEnd().split('\n').map(line=>JSON.parse(line)[0]); assert.deepEqual([...new Set(runs)].sort(),['abc','é🦀']);
@@ -138,11 +176,12 @@ async function main(){
       }
       if(s.phase==='replay-allow'){
         assert.deepEqual(text(join(repo,'rust-runs.txt')).trimEnd().split(/\r?\n/).sort(),['abc','é🦀']);
-        assert.ok(text(report).trim().length>0); save('replay-files.json',snapshot(cases));
+        assert.match(text(report),/^Build: `\.\/correct\.exe`\r?$/m); assert.match(text(report),/^Passed: 2\/2\r?$/m);
+        copyFileSync(report,join(root,'replay-allow-report.md'),constants.COPYFILE_EXCL); save('replay-files.json',snapshot(cases));
       }
       records.push({...proof,receipt:receipt.messageId}); save('turns.json',records);
     }
-    assert.equal(new Set(records.filter(r=>r.approval).map(r=>r.approval)).size,5,'one fresh approval ID per mutating call');
+    assert.equal(new Set(records.filter(r=>r.approval).map(r=>r.approval)).size,steps.filter(s=>s.outcome).length,'one fresh approval ID per planned decision');
   } finally {
     active=undefined;
     try { await ask('shutdown',{},12000); } finally {
@@ -155,10 +194,12 @@ async function main(){
   const logs=join(home,'sessions'); const paths=readdirSync(logs,{recursive:true}).filter(f=>basename(dirname(f))===sessionId && /^session(?:\.v\d+)?\.jsonl$/.test(basename(f)));
   assert.equal(paths.length,1); const logfile=join(logs,paths[0]), [header,...disk]=text(logfile).trimEnd().split('\n').map(JSON.parse);
   assert.equal(header.id,sessionId); assert.equal(realpathSync(header.cwd),realpathSync(repo));
+  for(const [type,expected] of [['permission/preset',{preset:'workspace-write'}],['sandbox/mode',{mode:'workspace-write'}],['approval/policy',{policy:'ask'}]])
+    assert.deepEqual(disk.filter(e=>e.type===type).map(e=>e.data),[expected],`${type} must remain at the normal SDK setting`);
   const audit=new Set(['turn/start','turn/end','tool/call','tool/result','approval/asked','approval/decided']);
   const facts=events=>events.filter(e=>audit.has(e.type)).map(({type,seq,data})=>({type,seq,data}));
   assert.deepEqual(facts(disk),facts(all),'wire evidence and persisted session disagree');
-  const summary={status:'PASS',...versions,archiveCopy:staged,logfile,logSha256:sha(readFileSync(logfile)),caseOutputs:{ascii:text(join(cases,'ascii.stdout')).trimEnd(),unicode:text(join(cases,'unicode.stdout')).trimEnd()},replayReport:report,turns:records,visual:'not observed; Manager data and installed assets only'};
+  const summary={status:'PASS',...versions,archiveCopy:staged,logfile,logSha256:sha(readFileSync(logfile)),caseOutputs:{ascii:text(join(cases,'ascii.stdout')).trimEnd(),unicode:text(join(cases,'unicode.stdout')).trimEnd()},replayReport:join(root,'replay-allow-report.md'),turns:records,visual:'not observed; Manager data and installed assets only'};
   save('result.json',summary); console.log(JSON.stringify({status:summary.status,result:join(root,'result.json'),versions,sessionLog:logfile},null,2));
 }
 try{await main()}catch(e){save('failure.json',{status:'FAIL',message:e.message,stack:e.stack,root,sessionId}); console.error(e.stack); process.exitCode=1;}

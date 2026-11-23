@@ -8,7 +8,7 @@ const { schemas } = require('./upstream-v3.3.0.json');
 const prefix = 'mcp__rust-anything__';
 const prompts = ['port_unit', 'port_whole_app'];
 const safe = { readOnlyHint: true, destructiveHint: false, openWorldHint: false };
-const entry = (name, annotations) => ({ name, annotations, description: 'Test ' + name, inputSchema: { type: 'object' } });
+const entry = (name, annotations) => ({ name, annotations, description: 'Test ' + name, inputSchema: { type: 'object', properties: name === 'go' ? { root: { type: 'string' }, command: { type: 'array', items: { type: 'string' } } } : {} } });
 const text = text => ({ type: 'text', text });
 const exec = { agent: { session: { append: () => assert.fail('plugin must not manufacture a turn') } }, callId: 'call-1', signal: new AbortController().signal };
 const hasBinary = process.platform === 'win32' ? process.arch === 'x64' : !!process.env.DSH_RUST_ANYTHING_BIN;
@@ -68,7 +68,8 @@ test('apply registers the pinned catalog, both prompts, and a skill with a resol
       assert.deepEqual(d.output.render(args, value), [text(value.content[0].text)]);
     } else {
       const before = h.spawns.length;
-      await assert.rejects(d.execute({}, exec), /not run: DSH approval rejected/);
+      const valid = Object.fromEntries(d.parameters.required.map(k => [k, d.parameters.properties[k].type === 'array' ? ['noop'] : '.']));
+      await assert.rejects(d.execute(valid, exec), /not run: DSH approval rejected/);
       assert.equal(h.spawns.length, before, 'denial must not spawn ' + tool.name);
     }
   }
@@ -85,10 +86,11 @@ test('apply registers the pinned catalog, both prompts, and a skill with a resol
   }
   assert.equal(h.asked.length, 20, 'prompts are read-only');
   decision = 'allowed-once';
-  await assert.rejects(h.tool('gate').execute({}, exec), e => {
-    assert.match(e.message, /missing .crate./);
-    assert.equal(e.cause.structuredContent.code, 'invalid_arguments');
-    assert.equal(e.cause.structuredContent.retryable, false);
+  await assert.rejects(h.tool('gate').execute({}, exec), /missing .crate./);
+  assert.equal(h.asked.length, 20, 'missing required arguments stop before approval');
+  await assert.rejects(h.tool('gate').execute({ crate: resolve(__dirname, 'no-such-test-crate') }, exec), error => {
+    assert.equal(error.cause.isError, true);
+    assert.match(error.cause.structuredContent.code, /\S/);
     return true;
   });
   assert.equal(h.asked.length, 21);
@@ -106,6 +108,32 @@ test('apply registers the pinned catalog, both prompts, and a skill with a resol
   assert.equal(h.sections[0].name, 'mcp:rust-anything');
   assert.match(h.sections[0].text(), /Never mark a port done/);
   assert.match(h.sections[0].text(), /mcp__rust-anything__go.*One approval/);
+});
+
+test('invalid targets and mistyped optional arguments never prompt, run or silently select defaults', async t => {
+  const h = await install(t, { real: false, decide: () => 'allowed-once', catalog: [
+    { ...entry('app_replay'), inputSchema: { type: 'object', properties: { repo: { type: 'string' }, build: { type: 'string' }, timeout: { type: 'integer' } }, required: ['repo'] } },
+    { ...entry('app_record'), inputSchema: { type: 'object', properties: { repo: { type: 'string' }, run: { type: 'array', items: { type: 'string' } }, traps: { type: 'boolean' }, float_tolerance: { type: 'number' } }, required: ['repo'] } },
+    { ...entry('build'), inputSchema: { type: 'object', properties: { abi: { type: 'array', items: { type: 'string', enum: ['x86', 'x86_64'] } } } } },
+  ] });
+  const before = h.spawns.length;
+  for (const [name, args, error] of [
+    ...[['./missing.exe'], null, false, '', ' \t'].map(build => ['app_replay', { repo: '.', build }, /app_replay.*build.*string/]),
+    ['app_replay', { repo: '.', bulid: './missing.exe' }, /app_replay.*bulid/],
+    ['app_replay', { repo: '.', timeout: 1.5 }, /timeout.*integer/],
+    ['app_replay', [], /object/], ['app_replay', {}, /repo/],
+    ['app_record', { repo: '.', run: 'python app.py' }, /run.*array/],
+    ['app_record', { repo: '.', run: ['python', null] }, /run\[1\].*string/],
+    ['app_record', { repo: '.', traps: 'false' }, /traps.*boolean/],
+    ['app_record', { repo: '.', float_tolerance: Infinity }, /float_tolerance.*number/],
+    ['build', { abi: ['invalid'] }, /abi\[0\].*x86/],
+  ]) await assert.rejects(h.tool(name).execute(args, exec), error);
+  assert.equal(h.asked.length, 0); assert.equal(h.spawns.length, before);
+  for (const args of [{ repo: '.' }, { repo: '.', build: '"./a b.exe" --flag' }]) {
+    await h.tool('app_replay').execute(args, exec);
+    assert.deepEqual(h.spawns.at(-1).params.arguments, args);
+  }
+  assert.equal(h.asked.length, 2, 'an intentional baseline or explicit build still requires a grant');
 });
 
 test('go requests approval for that exact workload once; no grant carries to the next call', async t => {
@@ -194,6 +222,12 @@ test('text and structured values round-trip; errors throw with native text and s
     assert.match(error.message, /invalid_arguments/);
     assert.match(error.message, /"retryable":false/);
     assert.deepEqual(error.cause, raw);
+    return true;
+  });
+  raw = { isError: true, content: [text('python failed (exit code: 9009):')] };
+  await assert.rejects(d.execute({}, exec), e => {
+    assert.deepEqual(e.cause, raw);
+    assert.match(e.message, /9009[\s\S]*Windows Store alias/);
     return true;
   });
   for (raw of [{}, { content: [{ type: 'image' }] }, { content: [text('bad flag')], isError: 'false' }]) {

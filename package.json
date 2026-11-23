@@ -1,6 +1,6 @@
 {
   "name": "dsh-rust-anything",
-  "version": "3.3.3-rc.1",
+  "version": "3.3.4",
   "description": "Native rust-anything migration tools and skills for DeepSeek Harness.",
   "license": "MIT",
   "type": "module",

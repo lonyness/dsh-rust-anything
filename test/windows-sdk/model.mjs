@@ -22,6 +22,10 @@ export function plan(repo, node, id) {
     ['record-deny-again', prefix+'app_record', record, 'rejected'],
     ['replay-allow', prefix+'app_replay', replay, 'allowed-once'],
     ['replay-deny-again', prefix+'app_replay', replay, 'rejected'],
+    ['replay-missing', prefix+'app_replay', {...replay, build:'./missing.exe'}, 'allowed-once'],
+    ['replay-invalid-array', prefix+'app_replay', {...replay, build:[replay.build]}],
+    ['replay-invalid-blank', prefix+'app_replay', {...replay, build:' \t '}],
+    ['cache-build', prefix+'build', {crate:join(repo,'cache-probe')}, 'allowed-once'],
   ].map(([phase,name,args,outcome], index) => ({phase,name,args,outcome,callId:`c${index}_${id}`, prompt:`RA sample ${id}: ${phase}`}));
 }
 
@@ -58,6 +62,7 @@ async function inspectDisplay(ctx, root, opts) {
   }
   assert.notEqual(translated[0],translated[1]); assert.notEqual(details.en.path,details['zh-CN'].path);
   assert.deepEqual(catalog.filter(t => t.name.startsWith(prefix)).map(t => t.name).sort(), expected);
+  assert.equal(catalog.find(t=>t.name===prefix+'app_replay').parameters.properties.build.type, 'string');
   assert.deepEqual(catalog.find(t=>t.name==='rust_anything_prompt').parameters.properties.name.enum.slice().sort(), ['port_unit','port_whole_app']);
   assert.ok(skill?.description?.trim(), 'skill must be advertised in the real model-facing catalog');
 }

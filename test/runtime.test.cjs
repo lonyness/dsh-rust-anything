@@ -84,6 +84,42 @@ test('startup metadata uses binary cwd, old defaults, standard client identity a
   }
 });
 
+test('only Windows workspace-write unit builds get a target under the approved crate or repository', async t => {
+  const platform = Object.getOwnPropertyDescriptor(process, 'platform');
+  Object.defineProperty(process, 'platform', { ...platform, value: 'win32' });
+  t.after(() => Object.defineProperty(process, 'platform', platform));
+  const { runtime, specs } = harness(), cwd = 'C:\\projects', e = exec(cwd, 'workspace-write');
+  const unit = 'C:\\projects\\one\\unit A', repo = 'C:\\projects\\two';
+  const local = unit + '\\.rust-anything\\target', composite = repo + '\\rust\\.rust-anything\\target';
+  const forged = { CARGO_TARGET_DIR: 'D:\\shared', PATH: 'D:\\untrusted' };
+  for (const [name, args, target] of [
+    ['build', { crate: 'one/unit A', env: forged }, local], ['gate', { crate: unit }, local],
+    ['report', { crate: unit }, local], ['enable', { crate: unit }, local],
+    ['build', { crate: 'two/unit A' }, repo + '\\unit A\\.rust-anything\\target'],
+    ['go', { root: 'two', crate: unit }, composite], ['app_wire', { repo }, composite], ['app_lift', { repo }, composite],
+    ['enable', { crate: unit, force: true }], ['app_wire', { repo, skip_gate: true }],
+    ['app_front_door', { repo }], ['app_record', { repo }], ['analyze', { root: repo }], ['map', { repo }],
+    ['record', { crate: unit }], ['fuzz', { crate: unit }], ['unknown', { crate: unit }], ['build', {}],
+  ]) {
+    const params = { name, arguments: args };
+    await runtime.request('tools/call', params, e);
+    const spec = specs.at(-1);
+    assert.deepEqual(spec.env, target ? { CARGO_TARGET_DIR: target } : undefined, name);
+    assert.deepEqual(spec.argv, ['sandbox:workspace-write', binary, 'mcp']);
+    assert.equal(spec.cwd, cwd);
+    assert.deepEqual(JSON.parse(spec.stdio.stdin.data.trimEnd().split('\n').at(-1)).params, params);
+  }
+  const params = { name: 'build', arguments: { crate: unit } };
+  for (const [method, execution] of [['tools/call', exec(cwd, 'read-only')], ['tools/call', exec(cwd, 'danger-full-access')],
+    ['tools/call', undefined], ['prompts/get', e]]) {
+    await runtime.request(method, params, execution);
+    assert.ok(!('env' in specs.at(-1)), method);
+  }
+  Object.defineProperty(process, 'platform', { ...platform, value: 'linux' });
+  await runtime.request('tools/call', params, e);
+  assert.ok(specs.slice(-2).every(s => !('env' in s)), 'Unix version check and call retain upstream behavior');
+});
+
 test('only canonical in-range launcher settings are accepted; read errors name the setting', () => {
   for (const [key, max] of [[START, 120000], [REQUEST, 3600000], [OUT, 67108864], [ERR, 65536]]) {
     for (const raw of ['', '0', '-1', '+10', '01', ' 1', '1 ', '1\n', '1.5', '1e2', '0x10', 'NaN', 'Infinity', '9007199254740993', String(max + 1)]) {

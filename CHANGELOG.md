@@ -1,6 +1,12 @@
 # Changelog
 
-## 3.3.3-rc.1 — Local candidate, not published (engine: rust-anything 3.3.0)
+## 3.3.4 — Stable DSH adapter (engine: rust-anything 3.3.0)
+
+- Includes the [3.3.3-rc.1 prerelease](https://github.com/lonyness/dsh-rust-anything/releases/tag/v3.3.3-rc.1): the final-package provenance gate and the narrow approval exemption remain in place.
+- Validate the pinned tools' argument names, required fields, types, array elements and enum values before requesting approval. A malformed `app_replay.build` no longer silently runs the original; omit it for a baseline or pass one nonblank command-line **string** to test a build.
+- Windows `workspace-write` builds use a target local to the selected crate/project rather than the shared `%LOCALAPPDATA%` cache. The sandbox and one-call approval remain in force. Python error `9009` now explains the interpreter requirement; no global PATH, CLI or TLS settings are changed.
+
+## 3.3.3-rc.1 — GitHub prerelease (engine: rust-anything 3.3.0)
 
 - Pin both archive and executable digests for all five official release assets. The maintainer gate checks the raw Windows EXE before packing and again inside the final `.tgz`; runtime compatibility checks do not authenticate external macOS/Linux binaries.
 - Limit approval-free native calls to `analyze` and `map` **with** their expected safety annotations. Unknown tools and missing or conflicting hints require a fresh one-call grant. No upstream engine, guide or tool protocol changes.

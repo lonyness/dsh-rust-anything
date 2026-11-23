@@ -13,7 +13,7 @@ With GitHub CLI, Python 3.9+ and npm, use a fresh destination. You can also supp
 gh release download v3.3.0 -R erkamyaman/rust-anything -D ../official-3.3.0
 python3 test/verify_release.py ../official-3.3.0 --pack-to ../candidate
 # Recheck the exact file intended for installation/release; do not repack after this.
-python3 test/verify_release.py ../official-3.3.0 --tgz ../candidate/dsh-rust-anything-3.3.3-rc.1.tgz
+python3 test/verify_release.py ../official-3.3.0 --tgz ../candidate/dsh-rust-anything-3.3.4.tgz
 ```
 
 The gate compares `SHA256SUMS`, each archive and its member with the pins, and checks the Windows EXE in the checkout **before** `npm pack --ignore-scripts`. It then opens the actual `.tgz`, checks its Windows EXE, provenance and package identity, and only then moves it out of staging and prints its SHA-256. Any mismatch exits nonzero: do not distribute a raw `npm pack` or a different file. This is a byte comparison against the pinned publisher release, not a claim of independent code signing.

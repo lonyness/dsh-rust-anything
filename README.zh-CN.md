@@ -2,7 +2,7 @@
 
 <h1 align="center">适用于 DeepSeek Harness 的 rust-anything</h1>
 
-[**下载插件 3.3.2**](https://github.com/lonyness/dsh-rust-anything/releases/download/v3.3.2/dsh-rust-anything-3.3.2.tgz) · [更新记录](CHANGELOG.md) · [上游项目](https://github.com/erkamyaman/rust-anything)
+[**下载插件 3.3.4**](https://github.com/lonyness/dsh-rust-anything/releases/download/v3.3.4/dsh-rust-anything-3.3.4.tgz) · [更新记录](CHANGELOG.md) · [上游项目](https://github.com/erkamyaman/rust-anything)
 
 [English](README.md) · **简体中文**
 
@@ -12,13 +12,13 @@
 
 ## 安装组合包
 
-**已发布插件：3.3.2 · 本源码：3.3.3-rc.1（本地候选）· 原生引擎：3.3.0。** 此版声明的 DSH 范围是 `>=0.2.2-rc.5 <0.3.0-0`，不是所有版本的实测保证。稳定版使用上方下载链接；本候选按[发布包核验步骤](runtime/PROVENANCE.md#maintainer-release-gate-from-the-checkout)打包。安装时把下方示例文件名换成校验通过的实际文件，不要再重新打包。
+**稳定版插件：3.3.4 · 原生引擎：3.3.0。** 声明的 DSH 范围是 `>=0.2.2-rc.5 <0.3.0-0`，不等于每个版本都实测过。请安装上方正式发布的 `.tgz`；复核下载包或自行打包时可使用[发布包核验工具](runtime/PROVENANCE.md#maintainer-release-gate-from-the-checkout)。
 
 - **插件页：** 解压组合包，在「插件」页安装本地组合包，输入含 `package.json` 的目录绝对路径。
 - **DSH CLI：** 直接安装下载的压缩包。以下是 Windows 示例，请替换为自己的 profile 名称和文件绝对路径：
 
   ```powershell
-  dsh plugin --profile "my-profile" add "file:C:/Downloads/dsh-rust-anything-3.3.2.tgz"
+  dsh plugin --profile "my-profile" add "file:C:/Downloads/dsh-rust-anything-3.3.4.tgz"
   ```
 
 在「插件」页选中并启用组合包。如果当前 profile 未热加载，重启 DSH，再到目标项目打开新会话。无需运行 `rust-anything setup`，也不用替换 `PATH` 中的 CLI。
@@ -39,6 +39,14 @@ macOS/Linux 在首次使用前对**解压后的文件**算一次 SHA-256（macOS
 确认范围后，先录制原实现的行为，再编写这个单元的 Rust 版本，回放同一组用例。输出不一致时，继续使用原实现。单个函数或热点参见[函数迁移指南](skills/rust-anything/SKILL.md)；CLI、HTTP 服务和库参见[整应用迁移指南](skills/rust-anything/whole-app.md)。
 
 **审批规则。** DSH 中的原生工具名为 `mcp__rust-anything__<上游名称>`。在引擎工具中，只有 `analyze` 和 `map` 且上游三个标记同时为 `readOnlyHint=true`、`destructiveHint=false`、`openWorldHint=false` 才免审批。名称未知、标记缺失或不一致时一律走现有单次审批；当前其余 20 个工具均须批准。两个提示模板通过只读的 `rust_anything_prompt` 获取，不是引擎工具执行。策略为 `never` 时，需要审批的调用会被**拒绝**，不是自动批准；不要改用 CLI 绕过拒绝。录制和回放会运行应用代码，只对可信项目执行。 SDK 自动化请通过正常的 `session/prompt` 轮次调用写入工具，并接入宿主 `approval/request`；不要在轮次外直接调用 `execute`。对一个工作负载的热点迁移，可用原生 `go` 在一次授权调用中执行一轮；`gate` 可合并就绪检查。单次许可不延续到下一调用。
+
+### 如何确认跑的是 Rust，而不是原版
+
+`app_record.run` 传**参数数组**（如 `["python", "cli.py"]`）；`app_replay.build` 传**一条命令行字符串**（如 `"./correct.exe"`）。只有有意回放原版时才省略 `build`。传错类型或拼错参数名现在会在审批前报错，不再悄悄回放原版。请同时核对返回的 `build`、`passed/total`、`skipped` 和 `failures`，不能仅凭工具调用结束判定移植成功。
+
+Windows 会话可选择「**工作区内修改**」（`/permission workspace-write`）启用单次审批；默认「完全权限」预设反而关闭审批。此沙箱下，需要编译的单元操作将 Cargo 目标放在 `<crate>/.rust-anything/target`，组合操作放在 `<项目>/rust/.rust-anything/target`。这不会自动安装编译器或下载依赖。如果 crates.io 报 `SEC_E_NO_CREDENTIALS`，请使用已经准备好的离线依赖或恢复可信的注册表/TLS 访问，不要关闭证书校验。
+
+固定引擎的 Python 单元操作先试 `python3` 再试 `python`。若启动环境只找到 Windows 商店别名（`9009`），请从有可运行 Python 的环境启动 DSH，例如已激活的项目虚拟环境。`app_record.run[0]` 和 Python `profile` 的工作负载可直接写解释器绝对路径，但这不能覆盖单元 `record`、`go`、`fuzz` 的内部解释器。适配器不修改全局 `PATH`。
 
 ## 大项目的资源限制
 

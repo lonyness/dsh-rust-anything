@@ -2,7 +2,7 @@
 
 <h1 align="center">rust-anything for DeepSeek Harness</h1>
 
-[**Download plugin 3.3.2**](https://github.com/lonyness/dsh-rust-anything/releases/download/v3.3.2/dsh-rust-anything-3.3.2.tgz) · [Changelog](CHANGELOG.md) · [Upstream project](https://github.com/erkamyaman/rust-anything)
+[**Download plugin 3.3.4**](https://github.com/lonyness/dsh-rust-anything/releases/download/v3.3.4/dsh-rust-anything-3.3.4.tgz) · [Changelog](CHANGELOG.md) · [Upstream project](https://github.com/erkamyaman/rust-anything)
 
 **English** · [简体中文](README.zh-CN.md)
 
@@ -12,13 +12,13 @@ This is an **unofficial DSH integration** based on [erkamyaman/rust-anything](ht
 
 ## Install the bundle
 
-**Published plugin: 3.3.2 · this checkout: 3.3.3-rc.1 (local candidate) · native engine: 3.3.0.** The declared DSH range is `>=0.2.2-rc.5 <0.3.0-0`, not a claim that every build has been tested. Use the published `.tgz` above for stable, or the [verified pack procedure](runtime/PROVENANCE.md#maintainer-release-gate-from-the-checkout) for this candidate. Install the same file you verified, substituting its filename in the command below.
+**Stable plugin: 3.3.4 · native engine: 3.3.0.** The declared DSH range is `>=0.2.2-rc.5 <0.3.0-0`, not a claim that every build has been tested. Install the `.tgz` from the release above. To verify a local build or an existing archive, use the [release checker](runtime/PROVENANCE.md#maintainer-release-gate-from-the-checkout).
 
 - **Plugins page:** Extract the archive. Install a local bundle using the absolute path of the directory containing `package.json`.
 - **DSH CLI:** Install the downloaded archive directly. Replace the profile and absolute path in this Windows example:
 
   ```powershell
-  dsh plugin --profile "my-profile" add "file:C:/Downloads/dsh-rust-anything-3.3.2.tgz"
+  dsh plugin --profile "my-profile" add "file:C:/Downloads/dsh-rust-anything-3.3.4.tgz"
   ```
 
 Select and enable the bundle in **Plugins**. If the profile does not reload it, restart DSH and open a new session in the target project. There is no need to run `rust-anything setup` or replace a CLI on your `PATH`.
@@ -39,6 +39,14 @@ Do not also add an official MCP server named `rust-anything`: it would publish t
 Once you agree on the scope, record the original behavior, implement that unit in Rust, and replay the same cases. If the outputs differ, keep the original implementation active. See the [function and hotspot guide](skills/rust-anything/SKILL.md) or the [whole-app guide](skills/rust-anything/whole-app.md) for CLIs, HTTP services, and libraries.
 
 **Approvals.** DSH exposes native tools as `mcp__rust-anything__<upstream_name>`. Only the engine tools `analyze` and `map` can skip approval, and only with all three annotations: `readOnlyHint=true`, `destructiveHint=false`, `openWorldHint=false`. Other names (including unknown tools), missing hints and conflicting hints require a fresh grant; this includes the other 20 native tools today. Fetching the two prompt templates via `rust_anything_prompt` is read-only, not an engine tool execution. Under `never`, calls requiring approval are **denied**, not auto-approved. Do not retry them through the CLI. Recording and replay execute application code: only run them on projects you trust. SDK clients should use a normal `session/prompt` turn with host `approval/request` handling, not call mutating tool definitions directly outside a turn. Use upstream `go` for one hot-path migration pass or `gate` for a combined readiness check. A grant never carries over to another call.
+
+### Replaying the intended build
+
+`app_record.run` is an argv **array** (`["python", "cli.py"]`); `app_replay.build` is a **command-line string** (`"./correct.exe"`). Omitting `build` deliberately replays the original. A malformed or misspelled argument now fails before approval instead of silently selecting that baseline. Check the returned `build`, `passed/total`, `skipped` and `failures`; a completed tool request alone is not evidence of a Rust port.
+
+On Windows use **Workspace Write** (`/permission workspace-write`) to get approval prompts; the default **Full access** preset disables them. Unit operations that build in Workspace Write use a per-crate Cargo target at `<crate>/.rust-anything/target` (composite operations use `<project>/rust/.rust-anything/target`). This does not install a compiler or populate the Cargo registry. If crates.io fails with `SEC_E_NO_CREDENTIALS`, use dependencies already available offline or restore trusted registry/TLS access; do not disable TLS verification.
+
+For Python unit operations, the pinned engine tries `python3` then `python`. If the launcher exposes only Windows Store aliases (`9009`), start DSH from an environment with a working Python, e.g. an activated project virtual environment. `app_record.run[0]` and the Python profiler workload can instead name an absolute interpreter. This is not an interpreter override for unit `record`, `go` or `fuzz`; the adapter does not change the global `PATH`.
 
 ## Limits for large projects
 

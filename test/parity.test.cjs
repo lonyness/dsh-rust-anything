@@ -136,14 +136,22 @@ fn main() -> std::process::ExitCode {
     { CARGO_MANIFEST_DIR: app, RUST_ANYTHING_REPO: repo });
   const fallback = tool(cwd, 'app_replay', { repo, build: './fallback' + suffix, timeout: 10 });
   assert.deepEqual([fallback.passed, fallback.total, fallback.skipped, fallback.failures], [2, 2, 0, []]);
+  assert.deepEqual(fallback.build, ['./fallback' + suffix]);
   assert.deepEqual(fallback.fallback.names.toSorted(), ['ascii', 'unicode']);
   t.diagnostic('Generated front-door fallback: 2/2 recorded cases passed via the original.');
+
+  const missing = './absent' + suffix;
+  const negative = rpc(cwd, 'tools/call', { name: 'app_replay', arguments: { repo, build: missing, case: 'unicode' } });
+  assert.equal(negative.result?.isError, true, 'a nonexistent target must not run the recorded command');
+  assert.ok(negative.result.content[0].text.includes(missing));
 
   // Same interface and exit code for both native builds. Only the counting rule changes.
   for (const [name, count] of [['correct', 's.chars().count()'], ['different', 's.len()']]) {
     fs.writeFileSync(join(repo, 'count.rs'), 'fn main() { let s = std::env::args().nth(1).unwrap(); println!("{}", ' + count + '); }\n');
     run(cwd, 'rustc', [join(repo, 'count.rs'), '-o', join(repo, name + suffix)]);
     const replay = tool(cwd, 'app_replay', { repo, build: './' + name + suffix, timeout: 10 });
+    assert.deepEqual(replay.build, ['./' + name + suffix]);
+    assert.equal(replay.fallback, null);
     assert.equal(replay.total, 2);
     assert.equal(replay.skipped, 0);
     if (name === 'correct') {

@@ -40,6 +40,7 @@ $p.Environment['PNPM_HOME'] = Join-Path $root 'pnpm'; $p.Environment['XDG_CACHE_
 $p.Environment['NPM_CONFIG_USERCONFIG'] = Join-Path $root 'npm\user.npmrc'; $p.Environment['NPM_CONFIG_GLOBALCONFIG'] = Join-Path $root 'npm\global.npmrc'
 $p.Environment['NPM_CONFIG_CACHE'] = Join-Path $root 'npm\cache'; $p.Environment['NPM_CONFIG_OFFLINE'] = 'true'
 $p.Environment['DSH_TELEMETRY_DISABLED'] = '1'; $p.Environment['RUSTUP_AUTO_INSTALL'] = '0'; $p.Environment['CI'] = 'true'
+$p.Environment['CARGO_NET_OFFLINE'] = 'true' # dependency-free probe; the driver must not set CARGO_TARGET_DIR
 $p.Environment['ELECTRON_RUN_AS_NODE'] = '1'
 foreach ($arg in @('--expose-internals',(Join-Path $PSScriptRoot 'smoke.mjs'),$archiveFile.FullName,$Sha256.ToLowerInvariant())) { $p.ArgumentList.Add($arg) }
 $child = [Diagnostics.Process]::Start($p)
