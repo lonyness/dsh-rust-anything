@@ -12,7 +12,7 @@ Migrate one function to Rust, then replay the original program’s inputs agains
 
 ![A real app_replay report: Build ./stats_probe.exe, Passed: 6/6, Fallback rate: not reported by this build, Every case matches.](docs/media/replay.png)
 
-*The engine's own report from a real DSH session against a Rust build, re-rendered from the saved file — [source, hash and honestly: this run reported no fallback rate](docs/media/PROVENANCE.md).*
+*The engine's own report from a real DSH session against a Rust build, rendered from the saved file ([source and hash](docs/media/PROVENANCE.md)). That build reported no fallback rate, so none is shown.*
 
 This is an **unofficial DSH integration** based on [erkamyaman/rust-anything](https://github.com/erkamyaman/rust-anything) v3.3.0. The native engine and migration guides are the work of [Erkam Yaman](https://github.com/erkamyaman) and the [upstream contributors](https://github.com/erkamyaman/rust-anything/graphs/contributors). [This repository](https://github.com/lonyness/dsh-rust-anything) packages them for DeepSeek Harness; it does not reimplement the migration engine.
 
