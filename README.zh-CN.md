@@ -2,7 +2,7 @@
 
 <h1 align="center">适用于 DeepSeek Harness 的 rust-anything</h1>
 
-[**下载插件 3.3.4**](https://github.com/lonyness/dsh-rust-anything/releases/download/v3.3.4/dsh-rust-anything-3.3.4.tgz) · [更新记录](CHANGELOG.md) · [上游项目](https://github.com/erkamyaman/rust-anything)
+[**下载插件 3.3.5**](https://github.com/lonyness/dsh-rust-anything/releases/download/v3.3.5/dsh-rust-anything-3.3.5.tgz) · [更新记录](CHANGELOG.md) · [上游项目](https://github.com/erkamyaman/rust-anything)
 
 [English](README.md) · **简体中文**
 
@@ -18,13 +18,13 @@
 
 ## 安装组合包
 
-**稳定版插件：3.3.4 · 原生引擎：3.3.0。** 声明的 DSH 范围是 `>=0.2.2-rc.5 <0.3.0-0`，不等于每个版本都实测过。请安装上方正式发布的 `.tgz`；复核下载包或自行打包时可使用[发布包核验工具](runtime/PROVENANCE.md#maintainer-release-gate-from-the-checkout)。
+**稳定版插件：3.3.5 · 原生引擎：3.3.0。** 声明的 DSH 范围是 `>=0.2.2-rc.5 <0.3.0-0`，不等于每个版本都实测过。请安装上方正式发布的 `.tgz`；复核下载包或自行打包时可使用[发布包核验工具](runtime/PROVENANCE.md#maintainer-release-gate-from-the-checkout)。
 
 - **插件页：** 解压组合包，在「插件」页安装本地组合包，输入含 `package.json` 的目录绝对路径。
 - **DSH CLI：** 直接安装下载的压缩包。以下是 Windows 示例，请替换为自己的 profile 名称和文件绝对路径：
 
   ```powershell
-  dsh plugin --profile "my-profile" add "file:C:/Downloads/dsh-rust-anything-3.3.4.tgz"
+  dsh plugin --profile "my-profile" add "file:C:/Downloads/dsh-rust-anything-3.3.5.tgz"
   ```
 
 在「插件」页选中并启用组合包。如果当前 profile 未热加载，重启 DSH，再到目标项目打开新会话。无需运行 `rust-anything setup`，也不用替换 `PATH` 中的 CLI。

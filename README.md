@@ -2,7 +2,7 @@
 
 <h1 align="center">rust-anything for DeepSeek Harness</h1>
 
-[**Download plugin 3.3.4**](https://github.com/lonyness/dsh-rust-anything/releases/download/v3.3.4/dsh-rust-anything-3.3.4.tgz) · [Changelog](CHANGELOG.md) · [Upstream project](https://github.com/erkamyaman/rust-anything)
+[**Download plugin 3.3.5**](https://github.com/lonyness/dsh-rust-anything/releases/download/v3.3.5/dsh-rust-anything-3.3.5.tgz) · [Changelog](CHANGELOG.md) · [Upstream project](https://github.com/erkamyaman/rust-anything)
 
 **English** · [简体中文](README.zh-CN.md)
 
@@ -18,13 +18,13 @@ This is an **unofficial DSH integration** based on [erkamyaman/rust-anything](ht
 
 ## Install the bundle
 
-**Stable plugin: 3.3.4 · native engine: 3.3.0.** The declared DSH range is `>=0.2.2-rc.5 <0.3.0-0`, not a claim that every build has been tested. Install the `.tgz` from the release above. To verify a local build or an existing archive, use the [release checker](runtime/PROVENANCE.md#maintainer-release-gate-from-the-checkout).
+**Stable plugin: 3.3.5 · native engine: 3.3.0.** The declared DSH range is `>=0.2.2-rc.5 <0.3.0-0`, not a claim that every build has been tested. Install the `.tgz` from the release above. To verify a local build or an existing archive, use the [release checker](runtime/PROVENANCE.md#maintainer-release-gate-from-the-checkout).
 
 - **Plugins page:** Extract the archive. Install a local bundle using the absolute path of the directory containing `package.json`.
 - **DSH CLI:** Install the downloaded archive directly. Replace the profile and absolute path in this Windows example:
 
   ```powershell
-  dsh plugin --profile "my-profile" add "file:C:/Downloads/dsh-rust-anything-3.3.4.tgz"
+  dsh plugin --profile "my-profile" add "file:C:/Downloads/dsh-rust-anything-3.3.5.tgz"
   ```
 
 Select and enable the bundle in **Plugins**. If the profile does not reload it, restart DSH and open a new session in the target project. There is no need to run `rust-anything setup` or replace a CLI on your `PATH`.

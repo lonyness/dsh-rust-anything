@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased — not yet published (engine: rust-anything 3.3.0)
+## 3.3.5 — Skill corrections, migration playbook and a stricter release gate (engine: rust-anything 3.3.0)
 
 - Reject the arguments the pinned engine would silently reinterpret: `app_record.port` outside `1..65535`, negative `timeout`/`pace`, and an `app_record.run` whose array is empty or starts blank. An out-of-range port made HTTP recording look like a CLI recording; a negative timeout fell back to the default and a negative pace kept the old value; a blank `run` reused the previous command instead of the argument given. Refused before approval, with the field and the value it received.
 - Say what a replay result does and does not prove: `app_record.run` and `app_replay.build` are omitted to reuse the last recording, a library's cases replay through each unit's bindings so `build` does not apply, and `passed`/`total` must be read together with `skipped`, `failures` and `fallback`. A build that reports no fallback rate is reported as such, not as zero.
