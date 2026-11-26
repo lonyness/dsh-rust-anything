@@ -26,3 +26,7 @@ The official v3.3.0 binaries do not render identical prompt text on every OS. Th
 | `skills/rust-anything/SKILL.md` | [plugin/skills/rust-anything/SKILL.md](https://github.com/erkamyaman/rust-anything/blob/c0862b8696b51779f4b32d16ad57b3601f75fb12/plugin/skills/rust-anything/SKILL.md) | `adcd6cd4b784ca41261af670713eb1843a3d42c2ecb3d4c27105bfe882f6c7aa` |
 | `skills/rust-anything/whole-app.md` | [plugin/skills/rust-anything/whole-app.md](https://github.com/erkamyaman/rust-anything/blob/c0862b8696b51779f4b32d16ad57b3601f75fb12/plugin/skills/rust-anything/whole-app.md) | `6228c0d7f46d319092900d816cd55c057bc22075e497818d5c27be9ad9bcc37d` |
 | `LICENSE` | [LICENSE](https://github.com/erkamyaman/rust-anything/blob/c0862b8696b51779f4b32d16ad57b3601f75fb12/LICENSE) | `f7c6d76768cf5bdcd8fbc9f4df6b040789ed9802707e49987dd8357a6bd92759` |
+
+`skills/rust-anything/playbook.md` is adapter-authored, not upstream, and carries no upstream digest. `docs/acceptance-zh.md` and `docs/media/` are adapter-authored too.
+
+The injected skill text is not byte-identical to `SKILL.md` on disk. Two edits are applied when it is registered: the standalone CLI-install fallback is removed (DSH must never be told to run it), and the language paragraph is replaced because the pinned guide still says the PHP and C# bridges do not exist while the pinned engine bridges both. The file bytes above stay pinned to the digest in this table.

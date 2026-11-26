@@ -42,7 +42,9 @@ macOS/Linux 在首次使用前对**解压后的文件**算一次 SHA-256（macOS
 
 > 用 rust-anything 分析当前项目，推荐一个适合先迁移的函数。先不要改文件。
 
-确认范围后，先录制原实现的行为，再编写这个单元的 Rust 版本，回放同一组用例。输出不一致时，继续使用原实现。单个函数或热点参见[函数迁移指南](skills/rust-anything/SKILL.md)；CLI、HTTP 服务和库参见[整应用迁移指南](skills/rust-anything/whole-app.md)。
+确认范围后，先录制原实现的行为，再编写这个单元的 Rust 版本，回放同一组用例。输出不一致时，继续使用原实现。单个函数或热点参见[函数迁移指南](skills/rust-anything/SKILL.md)；CLI、HTTP 服务和库参见[整应用迁移指南](skills/rust-anything/whole-app.md)；迁移中的编译错误、FFI 与 `unsafe` 审查、crate 与 feature 适配参见[迁移手册](skills/rust-anything/playbook.md)。
+
+**语言支持。** 固定引擎识别九种语言：TypeScript/JavaScript、Python、C、Go、Ruby、Java、Kotlin、PHP 和 C#。九种语言的分析与桥接都已在本仓实测；PHP 桥接只接受顶层函数，PHP 与 C# 不支持 `--batch`。回放 PHP、C#、Kotlin 需要各自的语言工具链，所以"桥接成功"不等于"回放通过"。
 
 **审批规则。** DSH 中的原生工具名为 `mcp__rust-anything__<上游名称>`。在引擎工具中，只有 `analyze` 和 `map` 且上游三个标记同时为 `readOnlyHint=true`、`destructiveHint=false`、`openWorldHint=false` 才免审批。名称未知、标记缺失或不一致时一律走现有单次审批；当前其余 20 个工具均须批准。两个提示模板通过只读的 `rust_anything_prompt` 获取，不是引擎工具执行。策略为 `never` 时，需要审批的调用会被**拒绝**，不是自动批准；不要改用 CLI 绕过拒绝。录制和回放会运行应用代码，只对可信项目执行。 SDK 自动化请通过正常的 `session/prompt` 轮次调用写入工具，并接入宿主 `approval/request`；不要在轮次外直接调用 `execute`。对一个工作负载的热点迁移，可用原生 `go` 在一次授权调用中执行一轮；`gate` 可合并就绪检查。单次许可不延续到下一调用。
 
@@ -83,7 +85,7 @@ npm test
 
 [测试](test/parity.test.cjs)核对上游 22 个工具的名称与参数、两个原生提示词的三种调用，以及成功和出错时的行为。它还录制一个 JavaScript CLI，并分别对两个 Rust 构建回放。按 Unicode 标量值计数的实现通过 **2/2** 个用例；按 UTF-8 字节计数的实现只通过 **1/2**（输入 `é🦀` 时，原程序输出 `2`，字节计数版本输出 `6`）。
 
-[适配层测试](test/adapter.test.cjs)覆盖工具注册、提示和审批结果；[运行时测试](test/runtime.test.cjs)覆盖超时、取消、输出截断和并发工作区。回放测试还编译生成的 Rust 入口回退模块，验证两条录制用例。各平台结果见 [CI 记录](https://github.com/lonyness/dsh-rust-anything/actions/workflows/test.yml)；CI 通过不等于完整桌面宿主实测。
+[适配层测试](test/adapter.test.cjs)覆盖工具注册、提示和审批结果；[运行时测试](test/runtime.test.cjs)覆盖超时、取消、输出截断和并发工作区。回放测试还编译生成的 Rust 入口回退模块，验证两条录制用例。技能本身由[五条中文验收场景](docs/acceptance-zh.md)约束：PHP 单元迁移、所有权编译错误、FFI 缓冲区审查、回放全过但全回退时，DSH 必须识别什么、给出什么结论。各平台结果见 [CI 记录](https://github.com/lonyness/dsh-rust-anything/actions/workflows/test.yml)；CI 通过不等于完整桌面宿主实测。
 
 [来源记录](runtime/PROVENANCE.md)列有上游提交、原始文件和 SHA-256 校验和。上游代码和指南采用 [MIT 许可证](LICENSE)。
 

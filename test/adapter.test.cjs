@@ -99,12 +99,24 @@ test('apply registers the pinned catalog, both prompts, and a skill with a resol
   assert.equal(skill.name, 'rust-anything');
   assert.equal(skill.source, 'bundled');
   assert.equal(skill.provider, 'rust-anything');
+  assert.match(skill.description, /Kotlin, PHP or C#/);
   assert.deepEqual(skill.resourceBase, { kind: 'directory', path: resolve(__dirname, '../skills/rust-anything').split(sep).join('/') });
   assert.ok(skill.content.includes('[whole-app.md](whole-app.md)'));
   assert.ok(readFileSync(join(skill.resourceBase.path, 'whole-app.md'), 'utf8').length > 0);
   assert.ok(skill.content.includes((await import('../lib/runtime.js')).runtimePath()));
   assert.doesNotMatch(skill.content, /If the MCP tools are not available, use the CLI/);
   assert.match(skill.content, /Never fall back to a terminal/);
+  // The pinned guide still claims PHP and C# bridges are missing; the injection must correct it.
+  assert.match(skill.content, /Languages: TypeScript\/JavaScript, Python, C, Go, Ruby, Java, Kotlin, PHP and C#/);
+  assert.doesNotMatch(skill.content, /does not take (PHP|C#) units yet/);
+  assert.match(skill.content, /PHP FFI, P\/Invoke for C#/);
+  assert.match(skill.content, /top-level functions only/);
+  const playbook = join(skill.resourceBase.path, 'playbook.md');
+  assert.ok(skill.content.includes(playbook.split(sep).join('/')));
+  const guidance = readFileSync(playbook, 'utf8');
+  for (const section of ['## 1. Which languages this build handles', '## 2. Compile errors after a port',
+    '## 3. Reviewing the boundary: FFI and unsafe', '## 4. Crate and feature fit']) assert.ok(guidance.includes(section), section);
+  for (const rule of ['E0382', 'E0499', 'E0515', 'E0277', 'rust_anything_free', 'Guaranteed by', 'rust-version']) assert.ok(guidance.includes(rule), rule);
   assert.equal(h.sections[0].name, 'mcp:rust-anything');
   assert.match(h.sections[0].text(), /Never mark a port done/);
   assert.match(h.sections[0].text(), /mcp__rust-anything__go.*One approval/);
