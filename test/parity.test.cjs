@@ -18,7 +18,9 @@ function fixture(t) {
 
 function run(cwd, command, args, input, extraEnv) {
   const env = { ...process.env, TEMP: cwd, TMP: cwd, TMPDIR: cwd, RUSTUP_AUTO_INSTALL: '0', ...extraEnv };
-  const p = spawnSync(command, args, { cwd, env, input, encoding: 'utf8', windowsHide: true, timeout: 60000 });
+  // A cold Windows runner spent more than 60 s on one `rustc` spawn and failed the gate
+  // with ETIMEDOUT. The cap only exists to stop a hung child, so give slow machines room.
+  const p = spawnSync(command, args, { cwd, env, input, encoding: 'utf8', windowsHide: true, timeout: 180000 });
   if (p.error) throw p.error;
   assert.equal(p.status, 0, command + ': ' + p.stderr);
   return p.stdout;
