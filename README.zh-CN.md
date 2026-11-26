@@ -8,6 +8,12 @@
 
 先选一个函数迁到 Rust，再用原程序录下的输入检验新实现。代理负责编写 Rust，原生引擎负责录制行为、回放和报告差异。回放通过说明新实现匹配已录制的用例，不代表所有输入都等价。
 
+**你能得到什么：** 判断是否迁移成功的是引擎，不是代理——它录制一次原行为，把同一批用例回放给 Rust 构建，并逐条指出差异。单元没通过校验前，原实现继续提供服务，前门程序会记录每次回退，所以迁移做到一半的程序仍然可用。本仓库 CI 实测：一个统计 Unicode 字符数的 JavaScript CLI 迁移后 **2/2** 用例通过；改成统计 UTF-8 字节数的变体只有 **1/2** 通过（原版输出 `2`，变体输出 `6`），回放会点名这条用例。
+
+![真实的 app_replay 报告：Build ./stats_probe.exe、Passed: 6/6、Fallback rate: not reported by this build、Every case matches。](docs/media/replay.png)
+
+*这是真实 DSH 会话中引擎对 Rust 构建给出的报告，按保存下来的文件重新渲染——[来源、校验和，以及这次构建未报告回退率的事实](docs/media/PROVENANCE.md)。*
+
 这是基于 [erkamyaman/rust-anything](https://github.com/erkamyaman/rust-anything) v3.3.0 的 **非官方 DSH 适配**。原生引擎和迁移指南来自 [Erkam Yaman](https://github.com/erkamyaman) 与[上游贡献者](https://github.com/erkamyaman/rust-anything/graphs/contributors)；[本仓库](https://github.com/lonyness/dsh-rust-anything) 将它们打包接入 DeepSeek Harness，没有重新实现迁移引擎。
 
 ## 安装组合包
@@ -42,7 +48,11 @@ macOS/Linux 在首次使用前对**解压后的文件**算一次 SHA-256（macOS
 
 ### 如何确认跑的是 Rust，而不是原版
 
-`app_record.run` 传**参数数组**（如 `["python", "cli.py"]`）；`app_replay.build` 传**一条命令行字符串**（如 `"./correct.exe"`）。只有有意回放原版时才省略 `build`。传错类型或拼错参数名现在会在审批前报错，不再悄悄回放原版。请同时核对返回的 `build`、`passed/total`、`skipped` 和 `failures`，不能仅凭工具调用结束判定移植成功。
+`app_record.run` 传**参数数组**（如 `["python", "cli.py"]`）；`app_replay.build` 传**一条命令行字符串**（如 `"./correct.exe"`）。两者都省略时复用上一次录制：`run` 取已保存的命令，`app_replay` 不带 `build` 就运行录下来的原命令；从来没录制过则直接报错，不会去猜。**库**是唯一必须省略 `build` 的情况：用例通过各单元的绑定回放，传命令行字符串会被拒绝。
+
+要看结果，不要只看传输。引擎返回 `build`、`passed`、`total`、`skipped`、`failures`、`fallback` 和报告路径；工具调用正常结束不等于移植成功。`fallback`（`cases`、`total`、`rate`、`names`）列出还原样交回原程序的用例，所以 **2/2 通过但 fallback 为 100% 时，两条用例都是原程序回答的，不是 Rust**。`fallback: null` 表示构建根本未报告回退率——应照此说明，不要写成 0。
+
+无效值现在会在审批前报错：参数拼错或类型不对、`run` 为空、端口不在 1–65535、`timeout` 或 `pace` 为负。引擎用 `u64`/`u16` 读取这些字段，超出范围的值被静默丢弃，结果就是 HTTP 录制退化成 CLI 录制、负超时变成默认 30 秒。
 
 Windows 会话可选择「**工作区内修改**」（`/permission workspace-write`）启用单次审批；默认「完全权限」预设反而关闭审批。此沙箱下，需要编译的单元操作将 Cargo 目标放在 `<crate>/.rust-anything/target`，组合操作放在 `<项目>/rust/.rust-anything/target`。这不会自动安装编译器或下载依赖。如果 crates.io 报 `SEC_E_NO_CREDENTIALS`，请使用已经准备好的离线依赖或恢复可信的注册表/TLS 访问，不要关闭证书校验。
 

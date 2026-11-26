@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased — not yet published (engine: rust-anything 3.3.0)
+
+- Reject the arguments the pinned engine would silently reinterpret: `app_record.port` outside `1..65535`, negative `timeout`/`pace`, and an `app_record.run` whose array is empty or starts blank. An out-of-range port made HTTP recording look like a CLI recording; a negative timeout fell back to the default and a negative pace kept the old value; a blank `run` reused the previous command instead of the argument given. Refused before approval, with the field and the value it received.
+- Say what a replay result does and does not prove: `app_record.run` and `app_replay.build` are omitted to reuse the last recording, a library's cases replay through each unit's bindings so `build` does not apply, and `passed`/`total` must be read together with `skipped`, `failures` and `fallback`. A build that reports no fallback rate is reported as such, not as zero.
+- READMEs open with what the engine actually decides and include a real `app_replay` report, with its source file and digest recorded in `docs/media/PROVENANCE.md`.
+- The release checker now requires the archive's members to equal what `npm pack --dry-run` would publish, compares every member with `git HEAD`, and runs the packaged test suite from the extracted archive; `--self-check` proves the comparator still rejects extra, missing and tampered members.
+
 ## 3.3.4 — Stable DSH adapter (engine: rust-anything 3.3.0)
 
 - Includes the [3.3.3-rc.1 prerelease](https://github.com/lonyness/dsh-rust-anything/releases/tag/v3.3.3-rc.1): the final-package provenance gate and the narrow approval exemption remain in place.

@@ -112,8 +112,8 @@ test('apply registers the pinned catalog, both prompts, and a skill with a resol
 
 test('invalid targets and mistyped optional arguments never prompt, run or silently select defaults', async t => {
   const h = await install(t, { real: false, decide: () => 'allowed-once', catalog: [
-    { ...entry('app_replay'), inputSchema: { type: 'object', properties: { repo: { type: 'string' }, build: { type: 'string' }, timeout: { type: 'integer' } }, required: ['repo'] } },
-    { ...entry('app_record'), inputSchema: { type: 'object', properties: { repo: { type: 'string' }, run: { type: 'array', items: { type: 'string' } }, traps: { type: 'boolean' }, float_tolerance: { type: 'number' } }, required: ['repo'] } },
+    { ...entry('app_replay'), inputSchema: { type: 'object', properties: { repo: { type: 'string' }, build: { type: 'string' }, port: { type: 'integer' }, timeout: { type: 'integer' } }, required: ['repo'] } },
+    { ...entry('app_record'), inputSchema: { type: 'object', properties: { repo: { type: 'string' }, run: { type: 'array', items: { type: 'string' } }, port: { type: 'integer' }, timeout: { type: 'integer' }, pace: { type: 'integer' }, traps: { type: 'boolean' }, float_tolerance: { type: 'number' } }, required: ['repo'] } },
     { ...entry('build'), inputSchema: { type: 'object', properties: { abi: { type: 'array', items: { type: 'string', enum: ['x86', 'x86_64'] } } } } },
   ] });
   const before = h.spawns.length;
@@ -124,16 +124,23 @@ test('invalid targets and mistyped optional arguments never prompt, run or silen
     ['app_replay', [], /object/], ['app_replay', {}, /repo/],
     ['app_record', { repo: '.', run: 'python app.py' }, /run.*array/],
     ['app_record', { repo: '.', run: ['python', null] }, /run\[1\].*string/],
+    ...[{ run: [] }, { run: [''] }, { run: ['  '] }].map(args => ['app_record', { repo: '.', ...args }, /run.*non-empty argv/]),
+    ...[['app_replay', { repo: '.', port: 70000 }], ['app_replay', { repo: '.', port: 0 }],
+      ['app_record', { repo: '.', port: -1 }], ['app_record', { repo: '.', port: 65536 }],
+    ].map(([name, args]) => [name, args, new RegExp(name + '\\.port.*got ' + args.port)]),
+    ...[['app_replay', { repo: '.', timeout: -1 }], ['app_record', { repo: '.', timeout: -30 }],
+      ['app_record', { repo: '.', pace: -5 }],
+    ].map(([name, args]) => [name, args, new RegExp(name + '\\.(timeout|pace).*got -')]),
     ['app_record', { repo: '.', traps: 'false' }, /traps.*boolean/],
     ['app_record', { repo: '.', float_tolerance: Infinity }, /float_tolerance.*number/],
     ['build', { abi: ['invalid'] }, /abi\[0\].*x86/],
   ]) await assert.rejects(h.tool(name).execute(args, exec), error);
   assert.equal(h.asked.length, 0); assert.equal(h.spawns.length, before);
-  for (const args of [{ repo: '.' }, { repo: '.', build: '"./a b.exe" --flag' }]) {
+  for (const args of [{ repo: '.' }, { repo: '.', build: '"./a b.exe" --flag' }, { repo: '.', port: 8080, timeout: 0 }]) {
     await h.tool('app_replay').execute(args, exec);
     assert.deepEqual(h.spawns.at(-1).params.arguments, args);
   }
-  assert.equal(h.asked.length, 2, 'an intentional baseline or explicit build still requires a grant');
+  assert.equal(h.asked.length, 3, 'an intentional baseline, an explicit build or a valid port/timeout still requires a grant');
 });
 
 test('go requests approval for that exact workload once; no grant carries to the next call', async t => {

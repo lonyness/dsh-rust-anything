@@ -8,6 +8,12 @@
 
 Migrate one function to Rust, then replay the original program’s inputs against it. The agent writes the Rust code; the native engine records behavior and reports differences. A passing replay covers the recorded cases, not every possible input.
 
+**What you get:** the engine, not the agent, decides whether the port matches — it records the original once, replays the same cases against the Rust build, and names each difference per case. Until a unit passes, the original keeps serving it and the front door counts every fallback, so a half-finished migration is still a working program. Measured on this repository's CI fixture: a JavaScript CLI that counts Unicode scalar values matches **2/2** recorded cases as Rust, while a byte-counting variant matches **1/2** (the original prints `2`, the variant `6`) and the replay names that case.
+
+![A real app_replay report: Build ./stats_probe.exe, Passed: 6/6, Fallback rate: not reported by this build, Every case matches.](docs/media/replay.png)
+
+*The engine's own report from a real DSH session against a Rust build, re-rendered from the saved file — [source, hash and honestly: this run reported no fallback rate](docs/media/PROVENANCE.md).*
+
 This is an **unofficial DSH integration** based on [erkamyaman/rust-anything](https://github.com/erkamyaman/rust-anything) v3.3.0. The native engine and migration guides are the work of [Erkam Yaman](https://github.com/erkamyaman) and the [upstream contributors](https://github.com/erkamyaman/rust-anything/graphs/contributors). [This repository](https://github.com/lonyness/dsh-rust-anything) packages them for DeepSeek Harness; it does not reimplement the migration engine.
 
 ## Install the bundle
@@ -42,7 +48,11 @@ Once you agree on the scope, record the original behavior, implement that unit i
 
 ### Replaying the intended build
 
-`app_record.run` is an argv **array** (`["python", "cli.py"]`); `app_replay.build` is a **command-line string** (`"./correct.exe"`). Omitting `build` deliberately replays the original. A malformed or misspelled argument now fails before approval instead of silently selecting that baseline. Check the returned `build`, `passed/total`, `skipped` and `failures`; a completed tool request alone is not evidence of a Rust port.
+`app_record.run` is an argv **array** (`["python", "cli.py"]`); `app_replay.build` is a **command-line string** (`"./correct.exe"`). Omit both to reuse the last recording: `run` is taken from the saved command, and `app_replay` without `build` runs the recorded original command — if nothing was recorded it fails instead of guessing. A **library** is the one case where `build` must be omitted: the cases replay through each unit's bindings and a build string is rejected.
+
+Read the result, not the transport. The engine returns `build`, `passed`, `total`, `skipped`, `failures` and `fallback`, plus a report path; a completed tool request alone is not evidence of a Rust port. `fallback` (`cases`, `total`, `rate`, `names`) lists the cases the build handed back to the original, so **2/2 passed at 100% fallback means both cases were answered by the original program, not by Rust**. `fallback: null` means the build reported no rate at all — say that, do not report it as zero.
+
+Malformed values now fail before approval: a misspelled or mistyped argument, an empty `run`, a port outside 1–65535, a negative `timeout` or `pace`. The engine reads those through `u64`/`u16` and silently drops what does not fit, which turned HTTP recording into CLI recording and a negative timeout into the 30 s default.
 
 On Windows use **Workspace Write** (`/permission workspace-write`) to get approval prompts; the default **Full access** preset disables them. Unit operations that build in Workspace Write use a per-crate Cargo target at `<crate>/.rust-anything/target` (composite operations use `<project>/rust/.rust-anything/target`). This does not install a compiler or populate the Cargo registry. If crates.io fails with `SEC_E_NO_CREDENTIALS`, use dependencies already available offline or restore trusted registry/TLS access; do not disable TLS verification.
 
