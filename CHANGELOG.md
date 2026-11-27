@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- The upstream documentation now lists this bundle under "Community integrations" (agents page). Both READMEs say so, and `runtime/PROVENANCE.md` records that the engine version named in that upstream sentence is updated here whenever the pin moves.
 - Both READMEs open with an explicit statement that this repository is a DeepSeek Harness plugin around the upstream rust-anything engine, not the upstream project and not published by it, followed by what the adapter maintains.
 - Rewrite both READMEs in a plainer register: the record/port/replay loop, what the adapter adds, a comparison with running the upstream CLI directly, and how a replay result is read. Promotional phrasing is removed; the technical content, the numbers and every stated limit stay. Adds `docs/media/banner.svg`.
 

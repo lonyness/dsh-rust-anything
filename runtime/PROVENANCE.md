@@ -30,3 +30,7 @@ The official v3.3.0 binaries do not render identical prompt text on every OS. Th
 `skills/rust-anything/playbook.md` is adapter-authored, not upstream, and carries no upstream digest. `docs/acceptance-zh.md` and `docs/media/` are adapter-authored too.
 
 The injected skill text is not byte-identical to `SKILL.md` on disk. Two edits are applied when it is registered: the standalone CLI-install fallback is removed (DSH must never be told to run it), and the language paragraph is replaced because the pinned guide still says the PHP and C# bridges do not exist while the pinned engine bridges both. The file bytes above stay pinned to the digest in this table.
+
+## Upstream listing
+
+The upstream documentation lists this bundle under "Community integrations" on [`website/pages/en/docs/introduction/agents.md`](https://github.com/erkamyaman/rust-anything/blob/main/website/pages/en/docs/introduction/agents.md). That line names the pinned engine version, so it is maintained here: when the engine pin above moves, update the version in that sentence in the same release.

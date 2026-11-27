@@ -4,7 +4,7 @@
 
 > **This repository is a DeepSeek Harness plugin for [rust-anything](https://github.com/erkamyaman/rust-anything). It is not the rust-anything project and is not published by its maintainers.** The porting engine, its source and its licence belong to the upstream authors.
 >
-> What is maintained here is the DSH integration layer: packaging of the pinned engine, 22 MCP tools, the approval boundary, argument validation, the bundled skill and the release checker. The upstream source is not modified.
+> What is maintained here is the DSH integration layer: packaging of the pinned engine, 22 MCP tools, the approval boundary, argument validation, the bundled skill and the release checker. The upstream source is not modified. The upstream documentation lists this bundle under [Community integrations](https://github.com/erkamyaman/rust-anything/blob/main/website/pages/en/docs/introduction/agents.md).
 
 <div align="center">
 

@@ -4,7 +4,7 @@
 
 > **本仓库是 [rust-anything](https://github.com/erkamyaman/rust-anything) 的 DeepSeek Harness 插件封装，不是 rust-anything 项目本身，也不由该项目发布。** 迁移引擎、源码与许可归上游作者所有。
 >
-> 此处维护的是 DSH 接入层：固定版本引擎的打包、22 个 MCP 工具、审批边界、参数校验、随包技能与发布校验工具。上游源码未作修改。
+> 此处维护的是 DSH 接入层：固定版本引擎的打包、22 个 MCP 工具、审批边界、参数校验、随包技能与发布校验工具。上游源码未作修改。上游文档已把本插件列在 [Community integrations](https://github.com/erkamyaman/rust-anything/blob/main/website/pages/en/docs/introduction/agents.md) 之下。
 
 <div align="center">
 
