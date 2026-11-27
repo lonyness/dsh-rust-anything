@@ -31,6 +31,8 @@ The official v3.3.0 binaries do not render identical prompt text on every OS. Th
 
 The injected skill text is not byte-identical to `SKILL.md` on disk. Two edits are applied when it is registered: the standalone CLI-install fallback is removed (DSH must never be told to run it), and the language paragraph is replaced because the pinned guide still says the PHP and C# bridges do not exist while the pinned engine bridges both. The file bytes above stay pinned to the digest in this table.
 
-## Upstream listing (pending)
+## Upstream listing
 
-PR [erkamyaman/rust-anything#709](https://github.com/erkamyaman/rust-anything/pull/709) proposes a "Community integrations" line in the upstream documentation ([`website/pages/en/docs/introduction/agents.md`](https://github.com/erkamyaman/rust-anything/blob/main/website/pages/en/docs/introduction/agents.md)), not yet merged. That line names the pinned engine version, so if it lands it becomes a commitment here: when the engine pin above moves, update the version in that upstream sentence in the same release. Until then, nothing in this repository claims the listing exists.
+The upstream documentation lists this plugin under "Community integrations" in [`website/pages/en/docs/introduction/agents.md`](https://github.com/erkamyaman/rust-anything/blob/main/website/pages/en/docs/introduction/agents.md), merged from PR [erkamyaman/rust-anything#709](https://github.com/erkamyaman/rust-anything/pull/709) on 2026-11-27. The merged line is a plain paragraph, not a quote block, and links the repository root rather than the releases page; the maintainer made both edits, so this repository follows that wording and does not claim any further endorsement.
+
+That line names the pinned engine version (currently 3.3.0), so it is a standing commitment: when the engine pin above moves, the version in that upstream sentence is updated in the same release.

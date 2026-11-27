@@ -2,7 +2,7 @@
 
 ## Unreleased
 
-- `runtime/PROVENANCE.md` records the upstream community-integrations PR ([#709](https://github.com/erkamyaman/rust-anything/pull/709)) as pending, together with the obligation it creates if it lands. No listing is claimed while it is open.
+- The upstream documentation now lists this plugin as a community integration, merged from [erkamyaman/rust-anything#709](https://github.com/erkamyaman/rust-anything/pull/709). Both READMEs and `runtime/PROVENANCE.md` record the listing, its exact wording and the obligation it carries: the engine version named there moves with the pin.
 - Both READMEs open with an explicit statement that this repository is a DeepSeek Harness plugin around the upstream rust-anything engine, not the upstream project and not published by it, followed by what the adapter maintains.
 - Rewrite both READMEs in a plainer register: the record/port/replay loop, what the adapter adds, a comparison with running the upstream CLI directly, and how a replay result is read. Promotional phrasing is removed; the technical content, the numbers and every stated limit stay. Adds `docs/media/banner.svg`.
 
