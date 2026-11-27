@@ -1,92 +1,170 @@
-<p align="center"><a href="https://github.com/erkamyaman/rust-anything"><img width="112" height="112" alt="rust-anything" src="https://raw.githubusercontent.com/erkamyaman/rust-anything/c0862b8696b51779f4b32d16ad57b3601f75fb12/docs/assets/logo.png"></a></p>
+<div align="center">
+  <img src="docs/media/banner.svg" alt="rust-anything for DeepSeek Harness" width="100%">
+</div>
 
-<h1 align="center">适用于 DeepSeek Harness 的 rust-anything</h1>
+<div align="center">
 
-[**下载插件 3.3.5**](https://github.com/lonyness/dsh-rust-anything/releases/download/v3.3.5/dsh-rust-anything-3.3.5.tgz) · [更新记录](CHANGELOG.md) · [上游项目](https://github.com/erkamyaman/rust-anything)
+**rust-anything 引擎的 DeepSeek Harness 插件：有类型的工具、受审批的写操作，以及一份能逐条审计的回放报告。**
 
-[English](README.md) · **简体中文**
+[![release](https://img.shields.io/github/v/release/lonyness/dsh-rust-anything?style=flat-square&label=release&color=f4661e)](https://github.com/lonyness/dsh-rust-anything/releases/latest)
+[![CI](https://img.shields.io/github/actions/workflow/status/lonyness/dsh-rust-anything/test.yml?style=flat-square&label=CI)](https://github.com/lonyness/dsh-rust-anything/actions/workflows/test.yml)
+[![DSH](https://img.shields.io/badge/DSH-%3E%3D0.2.2--rc.5%20%3C0.3.0--0-2f6feb?style=flat-square)](#平台与限制)
+[![engine](https://img.shields.io/badge/engine-3.3.0%20pinned-8b949e?style=flat-square)](#对比直接运行原版)
+[![tools](https://img.shields.io/badge/MCP%20tools-22-6e7681?style=flat-square)](#22-个工具)
+[![license](https://img.shields.io/badge/license-MIT-2f6feb?style=flat-square)](LICENSE)
 
-先选一个函数迁到 Rust，再用原程序录下的输入检验新实现。代理负责编写 Rust，原生引擎负责录制行为、回放和报告差异。回放通过说明新实现匹配已录制的用例，不代表所有输入都等价。
+<a href="#它到底做什么">它做什么</a> ·
+<a href="#60-秒上手">上手</a> ·
+<a href="#这个插件补了什么">补了什么</a> ·
+<a href="#对比直接运行原版">对比原版</a> ·
+<a href="#怎么读证据">证据</a> ·
+<a href="#22-个工具">工具</a> ·
+<a href="#审批">审批</a> ·
+<a href="#平台与限制">限制</a> ·
+<a href="README.md">English</a>
 
-**你能得到什么：** 判断是否迁移成功的是引擎，不是代理——它录制一次原行为，把同一批用例回放给 Rust 构建，并逐条指出差异。单元没通过校验前，原实现继续提供服务，前门程序会记录每次回退，所以迁移做到一半的程序仍然可用。本仓库 CI 实测：一个统计 Unicode 字符数的 JavaScript CLI 迁移后 **2/2** 用例通过；改成统计 UTF-8 字节数的变体只有 **1/2** 通过（原版输出 `2`，变体输出 `6`），回放会点名这条用例。
+</div>
 
-![真实的 app_replay 报告：Build ./stats_probe.exe、Passed: 6/6、Fallback rate: not reported by this build、Every case matches。](docs/media/replay.png)
+---
 
-*这是真实 DSH 会话中引擎对 Rust 构建给出的报告，按保存下来的文件重新渲染——[来源、校验和，以及这次构建未报告回退率的事实](docs/media/PROVENANCE.md)。*
+## 它到底做什么
 
-这是基于 [erkamyaman/rust-anything](https://github.com/erkamyaman/rust-anything) v3.3.0 的 **非官方 DSH 适配**。原生引擎和迁移指南来自 [Erkam Yaman](https://github.com/erkamyaman) 与[上游贡献者](https://github.com/erkamyaman/rust-anything/graphs/contributors)；[本仓库](https://github.com/lonyness/dsh-rust-anything) 将它们打包接入 DeepSeek Harness，没有重新实现迁移引擎。
+[rust-anything](https://github.com/erkamyaman/rust-anything) 是一个迁移引擎：读你的仓库、挑出值得重写的单元、为其中一个生成 Rust crate，再把它从**原程序**录制下来的用例回放到 Rust 构建上。这个包是那个引擎在 DeepSeek Harness 里的前端。它没有给你新增任何越权能力 —— 它做的是把引擎变成 22 个有类型的工具，并让证据始终跟在结论旁边。
 
-## 安装组合包
+工具强制走的循环：
 
-**稳定版插件：3.3.5 · 原生引擎：3.3.0。** 声明的 DSH 范围是 `>=0.2.2-rc.5 <0.3.0-0`，不等于每个版本都实测过。请安装上方正式发布的 `.tgz`；复核下载包或自行打包时可使用[发布包核验工具](runtime/PROVENANCE.md#maintainer-release-gate-from-the-checkout)。
+| 步骤 | 工具 | 你拿到什么 |
+|:--|:--|:--|
+| 1 | `analyze` / `map` | 迁移单元、顺序、带 `file:line` 的风险，以及每个单元该用哪种桥接。只读，不弹审批。 |
+| 2 | `record` | 通过真实运行原程序录下用例：输入、输出、退出码、写出的文件。 |
+| 3 | `bridge` → `build` | 带真实语言桥接的 Rust crate（napi、PyO3、C ABI、cgo、Fiddle、JNI、PHP FFI、P/Invoke）。 |
+| 4 | `diff` → `bench` → `gate` | 逐个用例比对、在你的负载上测速、跑完定义完成门禁。 |
 
-- **插件页：** 解压组合包，在「插件」页安装本地组合包，输入含 `package.json` 的目录绝对路径。
-- **DSH CLI：** 直接安装下载的压缩包。以下是 Windows 示例，请替换为自己的 profile 名称和文件绝对路径：
+编译通过不算迁完。用例对上、`gate` 通过、并且 `bench` 显示按调用方的方式调用它并不更慢，这个单元才算数。
 
-  ```powershell
-  dsh plugin --profile "my-profile" add "file:C:/Downloads/dsh-rust-anything-3.3.5.tgz"
-  ```
+**适合谁：** 你手上有一个能跑的程序（或一条热点路径），语言是 TypeScript/JavaScript、Python、C、Go、Ruby、Java、Kotlin、PHP 或 C#，你想换成 Rust，但不想丢掉现在已经依赖的行为。
 
-在「插件」页选中并启用组合包。如果当前 profile 未热加载，重启 DSH，再到目标项目打开新会话。无需运行 `rust-anything setup`，也不用替换 `PATH` 中的 CLI。
+## 60 秒上手
 
-| 平台 | 原生引擎 |
-| --- | --- |
-| Windows x64 | 已内置于 `runtime/win32-x64/rust-anything.exe`。此平台不使用 `DSH_RUST_ANYTHING_BIN`。 |
-| macOS 或 GNU/Linux（x64 / arm64） | 未内置。从[上游 v3.3.0 发布页](https://github.com/erkamyaman/rust-anything/releases/tag/v3.3.0) 下载对应架构的压缩包，用 [SHA256SUMS](https://github.com/erkamyaman/rust-anything/releases/download/v3.3.0/SHA256SUMS) 核对后，将 `DSH_RUST_ANYTHING_BIN` 设为可信可执行文件的绝对路径。请在启动 DSH 的环境中设置，不要指向目标项目提供的脚本。 |
+**1. 安装**（稳定版 **3.3.5**，引擎 **rust-anything 3.3.0**）：
 
-macOS/Linux 在首次使用前对**解压后的文件**算一次 SHA-256（macOS 用 `shasum -a 256`，Linux 用 `sha256sum`），与[来源清单](runtime/upstream-v3.3.0.json)中本平台的 `executableSha256` 比对。宿主检查程序自报的版本、MCP 身份和协议，只证明**版本兼容**，不证明是官方文件；插件不下载引擎，也不在每次调用时重复哈希。Windows 如需单独检查，请用**绝对路径**调用，`--version` 应输出 `rust-anything 3.3.0`。编译、录制和性能测量仍需目标项目自身的工具链和依赖。
-
-不要同时再配置一个名为 `rust-anything` 的官方 MCP 服务器：两者会发布相同的 `mcp__rust-anything__*` 工具名和 `mcp:rust-anything` 提示词段落，重复注册会失败。
-
-## 从只读分析开始
-
-> 用 rust-anything 分析当前项目，推荐一个适合先迁移的函数。先不要改文件。
-
-确认范围后，先录制原实现的行为，再编写这个单元的 Rust 版本，回放同一组用例。输出不一致时，继续使用原实现。单个函数或热点参见[函数迁移指南](skills/rust-anything/SKILL.md)；CLI、HTTP 服务和库参见[整应用迁移指南](skills/rust-anything/whole-app.md)；迁移中的编译错误、FFI 与 `unsafe` 审查、crate 与 feature 适配参见[迁移手册](skills/rust-anything/playbook.md)。
-
-**语言支持。** 固定引擎识别九种语言：TypeScript/JavaScript、Python、C、Go、Ruby、Java、Kotlin、PHP 和 C#。九种语言的分析与桥接都已在本仓实测；PHP 桥接只接受顶层函数，PHP 与 C# 不支持 `--batch`。回放 PHP、C#、Kotlin 需要各自的语言工具链，所以"桥接成功"不等于"回放通过"。
-
-**审批规则。** DSH 中的原生工具名为 `mcp__rust-anything__<上游名称>`。在引擎工具中，只有 `analyze` 和 `map` 且上游三个标记同时为 `readOnlyHint=true`、`destructiveHint=false`、`openWorldHint=false` 才免审批。名称未知、标记缺失或不一致时一律走现有单次审批；当前其余 20 个工具均须批准。两个提示模板通过只读的 `rust_anything_prompt` 获取，不是引擎工具执行。策略为 `never` 时，需要审批的调用会被**拒绝**，不是自动批准；不要改用 CLI 绕过拒绝。录制和回放会运行应用代码，只对可信项目执行。 SDK 自动化请通过正常的 `session/prompt` 轮次调用写入工具，并接入宿主 `approval/request`；不要在轮次外直接调用 `execute`。对一个工作负载的热点迁移，可用原生 `go` 在一次授权调用中执行一轮；`gate` 可合并就绪检查。单次许可不延续到下一调用。
-
-### 如何确认跑的是 Rust，而不是原版
-
-`app_record.run` 传**参数数组**（如 `["python", "cli.py"]`）；`app_replay.build` 传**一条命令行字符串**（如 `"./correct.exe"`）。两者都省略时复用上一次录制：`run` 取已保存的命令，`app_replay` 不带 `build` 就运行录下来的原命令；从来没录制过则直接报错，不会去猜。**库**是唯一必须省略 `build` 的情况：用例通过各单元的绑定回放，传命令行字符串会被拒绝。
-
-要看结果，不要只看传输。引擎返回 `build`、`passed`、`total`、`skipped`、`failures`、`fallback` 和报告路径；工具调用正常结束不等于移植成功。`fallback`（`cases`、`total`、`rate`、`names`）列出还原样交回原程序的用例，所以 **2/2 通过但 fallback 为 100% 时，两条用例都是原程序回答的，不是 Rust**。`fallback: null` 表示构建根本未报告回退率——应照此说明，不要写成 0。
-
-无效值现在会在审批前报错：参数拼错或类型不对、`run` 为空、端口不在 1–65535、`timeout` 或 `pace` 为负。引擎用 `u64`/`u16` 读取这些字段，超出范围的值被静默丢弃，结果就是 HTTP 录制退化成 CLI 录制、负超时变成默认 30 秒。
-
-Windows 会话可选择「**工作区内修改**」（`/permission workspace-write`）启用单次审批；默认「完全权限」预设反而关闭审批。此沙箱下，需要编译的单元操作将 Cargo 目标放在 `<crate>/.rust-anything/target`，组合操作放在 `<项目>/rust/.rust-anything/target`。这不会自动安装编译器或下载依赖。如果 crates.io 报 `SEC_E_NO_CREDENTIALS`，请使用已经准备好的离线依赖或恢复可信的注册表/TLS 访问，不要关闭证书校验。
-
-固定引擎的 Python 单元操作先试 `python3` 再试 `python`。若启动环境只找到 Windows 商店别名（`9009`），请从有可运行 Python 的环境启动 DSH，例如已激活的项目虚拟环境。`app_record.run[0]` 和 Python `profile` 的工作负载可直接写解释器绝对路径，但这不能覆盖单元 `record`、`go`、`fuzz` 的内部解释器。适配器不修改全局 `PATH`。
-
-## 大项目的资源限制
-
-仅在启动 **DSH 宿主** 的环境中设置，重新加载插件后生效；只接受无前导零的正十进制整数。大小限制针对引擎进程的输出，不限制磁盘上的录制文件。
-
-| 设置 | 默认值 | 有效范围 |
-| --- | ---: | ---: |
-| `DSH_RUST_ANYTHING_STARTUP_TIMEOUT_MS` | 15000 | 1–120000 |
-| `DSH_RUST_ANYTHING_REQUEST_TIMEOUT_MS` | 600000 | 1–3600000 |
-| `DSH_RUST_ANYTHING_STDOUT_MAX_BYTES` | 16777216 | 1–67108864 |
-| `DSH_RUST_ANYTHING_STDERR_MAX_BYTES` | 8192 | 1–65536 |
-
-超时、取消或输出被截断，不代表没有写文件。先检查目标项目的录制、构建文件或报告，再决定是否提高限制并重跑。
-
-**从早期 3.3.x 升级：** 用新包在**原来的 profile** 执行上面的安装命令，然后重载插件。升级会替换组合包，不会重复注册，也不改动系统 CLI。
-
-## 复测
-
-从可写的源码或解包目录运行下面的命令。测试需要 Node.js 22.14+、Rust 工具链（含 `cargo`、`rustc` 和链接器）；macOS/Linux 还需按上表设置原版 `DSH_RUST_ANYTHING_BIN`。
-
-```sh
-npm test
+```bash
+dsh plugin --profile "my-profile" add "file:C:/Downloads/dsh-rust-anything-3.3.5.tgz"
 ```
 
-[测试](test/parity.test.cjs)核对上游 22 个工具的名称与参数、两个原生提示词的三种调用，以及成功和出错时的行为。它还录制一个 JavaScript CLI，并分别对两个 Rust 构建回放。按 Unicode 标量值计数的实现通过 **2/2** 个用例；按 UTF-8 字节计数的实现只通过 **1/2**（输入 `é🦀` 时，原程序输出 `2`，字节计数版本输出 `6`）。
+也可以在 GUI 的插件页安装，或在插件市场里按名字装。tarball 从 [Releases](https://github.com/lonyness/dsh-rust-anything/releases/latest) 下载。
 
-[适配层测试](test/adapter.test.cjs)覆盖工具注册、提示和审批结果；[运行时测试](test/runtime.test.cjs)覆盖超时、取消、输出截断和并发工作区。回放测试还编译生成的 Rust 入口回退模块，验证两条录制用例。技能本身由[五条中文验收场景](docs/acceptance-zh.md)约束：PHP 单元迁移、所有权编译错误、FFI 缓冲区审查、回放全过但全回退时，DSH 必须识别什么、给出什么结论。各平台结果见 [CI 记录](https://github.com/lonyness/dsh-rust-anything/actions/workflows/test.yml)；CI 通过不等于完整桌面宿主实测。
+**2. 先问一个只读问题：**
 
-[来源记录](runtime/PROVENANCE.md)列有上游提交、原始文件和 SHA-256 校验和。上游代码和指南采用 [MIT 许可证](LICENSE)。
+> 用 rust-anything 分析这个仓库。给我最值得先迁的五个单元、风险，以及每个单元需要哪种桥接。不要改动任何文件。
 
-要移除此集成，可在「插件」页停用或移除组合包。这不会卸载系统 CLI，也不会删除已迁移的项目或录制结果。
+`analyze` 和 `map` 是仅有的两个不需要审批就能跑的工具，所以这一步只花 token。
+
+**3. 再批准一次构建。** 第一个写操作（`bridge`、`record`、`build` …）会问一次；批过之后，后面的循环就是正常干活。
+
+## 这个插件补了什么
+
+引擎是同一个，下面这些全是适配层：
+
+| 方面 | 说明 |
+|:--|:--|
+| **自带引擎** | Windows x64 随包附带未经修改的 3.3.0 可执行文件，校验和固定在 `runtime/upstream-v3.3.0.json`。不用安装、不搜 PATH、运行时不下载。macOS 与 GNU Linux（x64/arm64）指向你自己下载并校验过的二进制。 |
+| **有类型的工具，而不是背参数** | 22 个带 JSON Schema 的 MCP 工具，前缀 `mcp__rust-anything__*`。模型读契约而不是凭记忆敲命令，同一份固定目录在调用前做校验。 |
+| **审批前就拦掉错误参数** | 类型错、未知键、缺必填、枚举值非法，以及引擎会**静默改写**的那些陷阱（见下方对比表），都在弹审批之前被拒；报错会点名字段和实到值，而不是给你一个看不懂的结果。 |
+| **一次调用一次审批** | 只有 `analyze` 和 `map` 免审批，且仅因为引擎自己把它们标成只读。其余 20 个每次都要问一次；`never` 模式下会被拒绝。 |
+| **Windows 沙箱下可编译** | 在 `workspace-write` 下，构建原本会去写 `%LOCALAPPDATA%\rust-anything\target` 而被拒；现在给子进程把 `CARGO_TARGET_DIR` 限定在工作区内 —— 直接调用是 `<crate>/.rust-anything/target`，组合调用是 `<project>/rust/.rust-anything/target`。 |
+| **技能与引擎对齐** | 随包技能写的是这个固定引擎**真的**能做什么：九种语言，以及真实限制（PHP 只桥接顶层函数，PHP 与 C# 没有 `--batch`）；另有一份[迁移 playbook](skills/rust-anything/playbook.md)：编译错误诊断（E0382、E0507、E0499、E0502、E0597、E0515、E0716、E0277）、FFI 与 `unsafe` 审查、按你自己的 `Cargo.toml` 匹配 crate 与 feature。 |
+| **提示里带着读证据的规矩** | 注入的指引要求模型把 `passed`/`total`/`skipped`/`failures`/`fallback` 合起来看，并明确：`2/2` 但回退率 100% 不是 Rust 的结果；`fallback: null` 只代表"没报告"，永远不等于 0。 |
+| **发布物可复核** | `test/verify_release.py` 用 npm 发布清单比对 tarball 成员、拿 git `HEAD` 逐字节核对，再解包跑测试。三平台 CI 每次推送都做同样的事。 |
+
+## 对比直接运行原版
+
+同一个引擎，不同的周边。下面是引擎搬进 DSH 之后**真实改变了什么**：
+
+| 方面 | 只跑 rust-anything CLI | DSH 里的这个插件 |
+|:--|:--|:--|
+| **拿到引擎** | 按平台下载、解包、放进 `PATH`、手动升级 | 包内固定 3.3.0 可执行文件（Windows x64），记录 SHA-256；其他平台用 `DSH_RUST_ANYTHING_BIN` 指向你自己校验过的路径 |
+| **怎么调用** | 记 22 个子命令和各自的参数 | 22 个有类型的工具，模型读 schema 而不是猜 |
+| **数值越界** | `port: 70000` 被 `u16::try_from` 丢弃，HTTP 请求消失，录制静默降级成 CLI 模式；`timeout: -5` 变成"没给超时"、回落到配置的 30 秒；`pace: -5` 保留旧值 | 审批前拒绝：`app_record.port: expected an integer from 1 to 65535, got 70000` |
+| **空的 `run`** | 空列表进 `strings("run")` 就复用上次录过的命令 —— 你以为重录了 `php other.php`，其实录的是旧命令 | 拒绝：要么给非空 argv 且首项是程序名，要么你明确省略 `run` |
+| **回放目标** | 本该传字符串的地方传了别的，引擎直接当没传，然后走单元绑定回放，看着像通过 | 拒绝：`app_replay.build` 必须是一条命令行字符串；库必须省略它 |
+| **权限** | shell 允许什么就能干什么 | 每次调用单独授权，只有那一对只读工具例外；`never` 下写操作被拒 |
+| **Windows 构建缓存** | 往工作区外写，在 `workspace-write` 下被拒 | `CARGO_TARGET_DIR` 限定在工作区内 |
+| **版本漂移** | npm 与自动更新会在你脚下换引擎 | 不自动更新、不搜 PATH、运行时不下载 —— 跑的就是固定那一版 |
+| **遥测** | — | 没有。唯一的网络流量是你自己的构建拉下来的依赖。 |
+
+**它刻意不改的东西：** 引擎逻辑；磁盘上的 `SKILL.md` 原文件（两处纠正在注入时生效，[PROVENANCE](runtime/PROVENANCE.md) 记录了两者的差异）；你的项目文件；也不承诺"迁完之后在任何地方行为完全一致"。它同样不会替你升级引擎，即使上游发了新版。
+
+## 怎么读证据
+
+<div align="center">
+  <img src="docs/media/replay.png" alt="app_replay 报告：Build ./stats_probe.exe，Passed 6/6，Every case matches" width="820">
+</div>
+
+这是引擎自己在真实 DSH 会话里写的报告，从保存下来的文件渲染而来（[来源与哈希](docs/media/PROVENANCE.md)）。一次回放是五个数，不是一个：
+
+- `passed` / `total` —— 对上的用例数。`skipped` 大于 0 意味着这次验证比看上去少。
+- `failures` —— 每条都点名用例和差异。有一条失败就是这个单元没迁完，不是"误差"。
+- `fallback` —— 这次回放里还有多少仍由原实现作答。`6/6` 配上 100% 回退率，说明 Rust 代码根本没跑过。`null` 表示这个构建没报告回退率，和 `0` 不是一回事。
+
+## 22 个工具
+
+<details>
+<summary><b>按阶段看完整列表</b></summary>
+
+| 阶段 | 工具 |
+|:--|:--|
+| 看 —— 不弹审批 | `map`、`analyze` |
+| 规划 | `profile`、`bridge`、`package` |
+| 录制与证明 | `record`、`refresh`、`build`、`diff`、`bench`、`gate`、`report` |
+| 开关单元 | `shadow`、`enable`、`disable` |
+| 提速 | `go`、`fuzz` |
+| 整应用 | `app_record`、`app_replay`、`app_front_door`、`app_wire`、`app_lift` |
+
+`rust_anything_prompt` 是只读辅助工具，返回引擎自带的迁移提示模板。
+
+</details>
+
+## 审批
+
+- `analyze` 与 `map` 免审批，因为引擎用 `readOnlyHint: true`、`destructiveHint: false`、`openWorldHint: false` 声明了它们只读。
+- 其余每次调用都单独问一次，附带确切参数。批过一次不等于长期授权。
+- 这里没有绕过宿主的后门：被拒的工具就是被拒。换终端重跑、加 `force`、跳过 gate 都不算绕法，技能里也这么写着。
+- 报错点名了字段，就是适配层在干活 —— 改参数，而不是原样重试。
+
+## 平台与限制
+
+| 平台 | 引擎 |
+|:--|:--|
+| Windows x64 | 随包附带。这里故意忽略 `DSH_RUST_ANYTHING_BIN`，保证跑的就是随包那一个。 |
+| macOS / GNU Linux（x64 或 arm64） | 自己提供：从[上游 v3.3.0 Release](https://github.com/erkamyaman/rust-anything/releases/tag/v3.3.0) 下载对应资产，用 `SHA256SUMS` 校验后把 `DSH_RUST_ANYTHING_BIN` 设为它的绝对路径。若自己从源码构建，`--version` 应打印 `rust-anything 3.3.0`。 |
+
+如实写出的已知限制：
+
+- **写操作需要放开的沙箱。** Windows 上用 `/permission workspace-write`，否则构建和 gate 会在引擎的缓存目录上失败。
+- **Python 单元需要可用的解释器。** `record` 与 `go` 先探 `python3`、再探 `python`。如果机器上的 `python` 是应用商店存根，会拿到 `9009`；适配层会把这个诊断出来，你也可以在 `app_record.run[0]` 里写绝对解释器路径。
+- **代理后面的依赖下载会失败。** 报 `SEC_E_NO_CREDENTIALS` 时需要处理网络或代理配置。不要靠关掉 TLS 校验来"修"它 —— 适配层不会这么做。
+- **大仓库是被有意限住的。** 四个宿主变量可以在不把编译器重新放开成无边界工作的前提下调节：
+
+| 变量 | 默认值 | 范围 |
+|:--|--:|:--|
+| `DSH_RUST_ANYTHING_STARTUP_TIMEOUT_MS` | 15000 | 1 – 120000 |
+| `DSH_RUST_ANYTHING_REQUEST_TIMEOUT_MS` | 600000 | 1 – 3600000 |
+| `DSH_RUST_ANYTHING_STDOUT_MAX_BYTES` | 16777216 | 1 – 67108864 |
+| `DSH_RUST_ANYTHING_STDERR_MAX_BYTES` | 8192 | 1 – 65536 |
+
+本仓库 CI 已确认：随包引擎能精确复现 Unicode 行为（含 `é🦀` 的用例，原版得 2、按字节处理的实现得 6 —— 报告会点名差异而不是掩盖它）。构建与回放端到端验证覆盖 TypeScript、Python、C；其余六种语言只验证到"分析与桥接产出真实文件"，因为 CI 里没有对应工具链。
+
+## 验证下载物
+
+```bash
+python test/verify_release.py <上游 v3.3.0 资产目录> --tgz dsh-rust-anything-3.3.5.tgz
+```
+
+它会先核对上游官方校验和，再确认 tarball 的成员与 npm 发布清单完全一致、每个成员与 git `HEAD` 逐字节相同，最后解包跑 `node --test test/*.test.cjs`。`--self-check` 用来证明这个校验器自己会接受正确集合、并分别拒绝被篡改、多出或缺失的成员。参与开发：`npm test`（Node 22.14+ 与 Rust 工具链），细节见 [runtime/PROVENANCE.md](runtime/PROVENANCE.md#maintainer-release-gate-from-the-checkout)。
+
+## 文档
+
+[Playbook](skills/rust-anything/playbook.md) · [中文验收场景](docs/acceptance-zh.md) · [引擎技能](skills/rust-anything/SKILL.md) · [整应用指南](skills/rust-anything/whole-app.md) · [细节](docs/DETAIL.zh.md) · [变更记录](CHANGELOG.md) · [测试](test/parity.test.cjs)
+
+MIT 许可，与上游引擎一致。非官方集成：与 rust-anything 项目无隶属关系，也未获其背书。卸载：`dsh plugin --profile "my-profile" remove dsh-rust-anything`；除了插件目录本身，只会在工作区内产生 Cargo 构建输出。

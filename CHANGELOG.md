@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Rewrite both READMEs around the three questions a new user actually has: what the bundle does, what it adds over the engine, and how to read a replay result. The comparison against running the upstream CLI directly is now a table that names the arguments the engine would silently reinterpret and what this adapter does instead. Adds `docs/media/banner.svg` (hand-authored, no external references) and drops the duplicated prose that had accumulated between the two languages.
+
 ## 3.3.5 — Skill corrections, migration playbook and a stricter release gate (engine: rust-anything 3.3.0)
 
 - Reject the arguments the pinned engine would silently reinterpret: `app_record.port` outside `1..65535`, negative `timeout`/`pace`, and an `app_record.run` whose array is empty or starts blank. An out-of-range port made HTTP recording look like a CLI recording; a negative timeout fell back to the default and a negative pace kept the old value; a blank `run` reused the previous command instead of the argument given. Refused before approval, with the field and the value it received.
