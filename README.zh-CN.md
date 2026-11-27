@@ -64,6 +64,15 @@ dsh plugin --profile "my-profile" add "file:C:/Downloads/dsh-rust-anything-3.3.5
 
 **3. 批准一次写操作。** 第一个写操作（`bridge`、`record`、`build` 等）会请求审批，授权只对当次调用有效。
 
+**各步骤需要什么。** 插件包只带引擎，其余工具链由本机提供；缺少程序时，工具返回的错误里会写出缺的是哪一个。
+
+| 步骤 | 需要 |
+|:--|:--|
+| `analyze`、`map`、`bridge` | 除插件包外不需要其他东西，只读取文件并生成 crate。 |
+| `record` | TypeScript/JavaScript 需要 PATH 里有 `node`；Python 需要可用的 `python3`（或 `python`）。Windows 上来自 Microsoft Store 的 `python` 是存根，会以 9009 退出。 |
+| `build`、`gate`、`bench`、`diff`、`shadow` | Rust 工具链（`cargo`、`rustc`），首次还需要网络下载 crate。 |
+| 运行迁移后的结果 | 原项目本来需要的运行环境。 |
+
 ## 适配层能力
 
 引擎未作改动，下列内容属于适配层。

@@ -64,6 +64,15 @@ The same bundle can be installed from the plugin page in the GUI or from the plu
 
 **3. Approve one write.** The first write operation (`bridge`, `record`, `build`, …) asks for approval. Approval covers that call only.
 
+**What each step needs.** The bundle carries the engine, not the rest of the toolchain. A missing program is named in the error the tool returns.
+
+| Step | Needs |
+|:--|:--|
+| `analyze`, `map`, `bridge` | Nothing beyond the bundle. They read files and generate a crate. |
+| `record` | `node` on `PATH` for TypeScript/JavaScript, a working `python3` (or `python`) for Python. On Windows the `python` from the Microsoft Store is a stub that exits with 9009. |
+| `build`, `gate`, `bench`, `diff`, `shadow` | A Rust toolchain (`cargo`, `rustc`) and network access the first time, to fetch crates. |
+| Running the ported result | Whatever the original project already needs at runtime. |
+
 ## What the plugin adds
 
 The engine is unchanged. The following is the adapter layer around it.
