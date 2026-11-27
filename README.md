@@ -64,7 +64,11 @@ The same bundle can be installed from the plugin page in the GUI or from the plu
 
 **3. Approve one write.** The first write operation (`bridge`, `record`, `build`, …) asks for approval. Approval covers that call only.
 
-**What each step needs.** The bundle carries the engine, not the rest of the toolchain. A missing program is named in the error the tool returns.
+**What each step needs.** The bundle carries the engine, not the rest of the toolchain. A missing program is named in the error the tool returns, so ask the agent to check first rather than discover it halfway through a port:
+
+> Check whether this machine has the toolchains rust-anything needs (node, python3, cargo, rustc). Tell me exactly what is missing and how you would install it. Do not install anything until I agree.
+
+The agent's own shell is where the check happens, and DeepSeek Harness has to be restarted after an install: the MCP process keeps the PATH DSH started with.
 
 | Step | Needs |
 |:--|:--|

@@ -120,6 +120,13 @@ test('apply registers the pinned catalog, both prompts, and a skill with a resol
   assert.equal(h.sections[0].name, 'mcp:rust-anything');
   assert.match(h.sections[0].text(), /Never mark a port done/);
   assert.match(h.sections[0].text(), /mcp__rust-anything__go.*One approval/);
+  // A fresh machine: the agent must check the toolchains, ask before installing and ask for a restart.
+  for (const hint of ['check the environment before the first write', 'winget install Rustlang.Rustup',
+    'winget install OpenJS.NodeJS.LTS', 'winget install Python.Python.3.12', 'restart DeepSeek Harness',
+    'analyze, map and bridge need none of it']) {
+    assert.ok(skill.content.includes(hint), hint);
+    assert.ok(h.sections[0].text().includes(hint), hint);
+  }
 });
 
 test('invalid targets and mistyped optional arguments never prompt, run or silently select defaults', async t => {
@@ -247,6 +254,24 @@ test('text and structured values round-trip; errors throw with native text and s
   await assert.rejects(d.execute({}, exec), e => {
     assert.deepEqual(e.cause, raw);
     assert.match(e.message, /9009[\s\S]*Windows Store alias/);
+    return true;
+  });
+  for (const [message, expected] of [
+    ['error: running cargo build: program not found', /Rust toolchain is not on PATH[\s\S]*winget install Rustlang\.Rustup[\s\S]*restart DeepSeek Harness/],
+    ['error: running node: program not found', /Node\.js is not on PATH[\s\S]*OpenJS\.NodeJS\.LTS/],
+    ['error: running python3: program not found', /Python is not on PATH[\s\S]*Python\.Python\.3\.12/],
+    ['error: running dotnet: program not found', /original language runtime is not on PATH[\s\S]*\.NET SDK/],
+  ]) {
+    raw = { isError: true, content: [text(message)] };
+    await assert.rejects(d.execute({}, exec), error => {
+      assert.match(error.message, expected);
+      assert.deepEqual(error.cause, raw);
+      return true;
+    });
+  }
+  raw = { isError: true, content: [text('error: no such unit')] };
+  await assert.rejects(d.execute({}, exec), error => {
+    assert.doesNotMatch(error.message, /restart DeepSeek Harness/);
     return true;
   });
   for (raw of [{}, { content: [{ type: 'image' }] }, { content: [text('bad flag')], isError: 'false' }]) {

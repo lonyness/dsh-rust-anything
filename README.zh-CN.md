@@ -64,7 +64,11 @@ dsh plugin --profile "my-profile" add "file:C:/Downloads/dsh-rust-anything-3.3.5
 
 **3. 批准一次写操作。** 第一个写操作（`bridge`、`record`、`build` 等）会请求审批，授权只对当次调用有效。
 
-**各步骤需要什么。** 插件包只带引擎，其余工具链由本机提供；缺少程序时，工具返回的错误里会写出缺的是哪一个。
+**各步骤需要什么。** 插件包只带引擎，其余工具链由本机提供；缺少程序时，工具返回的错误里会写出缺的是哪一个。因此在开始迁移前先让 agent 检查，而不是做到一半才发现：
+
+> 检查这台机器是否具备 rust-anything 需要的工具链（node、python3、cargo、rustc）。告诉我还缺什么、准备怎么装。我同意之前不要安装任何东西。
+
+检查发生在 agent 自己的 shell 里；安装完成后需要重启 DeepSeek Harness，因为 MCP 进程沿用 DSH 启动时的 PATH。
 
 | 步骤 | 需要 |
 |:--|:--|
