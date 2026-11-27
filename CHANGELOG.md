@@ -2,7 +2,8 @@
 
 ## Unreleased
 
-- Rewrite both READMEs around the three questions a new user actually has: what the bundle does, what it adds over the engine, and how to read a replay result. The comparison against running the upstream CLI directly is now a table that names the arguments the engine would silently reinterpret and what this adapter does instead. Adds `docs/media/banner.svg` (hand-authored, no external references) and drops the duplicated prose that had accumulated between the two languages.
+- Both READMEs open with an explicit statement that this repository is a DeepSeek Harness plugin around the upstream rust-anything engine, not the upstream project and not published by it, followed by what the adapter maintains.
+- Rewrite both READMEs in a plainer register: the record/port/replay loop, what the adapter adds, a comparison with running the upstream CLI directly, and how a replay result is read. Promotional phrasing is removed; the technical content, the numbers and every stated limit stay. Adds `docs/media/banner.svg`.
 
 ## 3.3.5 — Skill corrections, migration playbook and a stricter release gate (engine: rust-anything 3.3.0)
 

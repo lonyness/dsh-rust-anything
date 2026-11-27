@@ -2,149 +2,149 @@
   <img src="docs/media/banner.svg" alt="rust-anything for DeepSeek Harness" width="100%">
 </div>
 
-<div align="center">
+> **This repository is a DeepSeek Harness plugin for [rust-anything](https://github.com/erkamyaman/rust-anything). It is not the rust-anything project and is not published by its maintainers.** The porting engine, its source and its licence belong to the upstream authors.
+>
+> What is maintained here is the DSH integration layer: packaging of the pinned engine, 22 MCP tools, the approval boundary, argument validation, the bundled skill and the release checker. The upstream source is not modified.
 
-**A DeepSeek Harness plugin for the rust-anything engine: typed tools, gated writes, and a replay report you can audit case by case.**
+<div align="center">
 
 [![release](https://img.shields.io/github/v/release/lonyness/dsh-rust-anything?style=flat-square&label=release&color=f4661e)](https://github.com/lonyness/dsh-rust-anything/releases/latest)
 [![CI](https://img.shields.io/github/actions/workflow/status/lonyness/dsh-rust-anything/test.yml?style=flat-square&label=CI)](https://github.com/lonyness/dsh-rust-anything/actions/workflows/test.yml)
-[![DSH](https://img.shields.io/badge/DSH-%3E%3D0.2.2--rc.5%20%3C0.3.0--0-2f6feb?style=flat-square)](#platform-and-limits)
-[![engine](https://img.shields.io/badge/engine-3.3.0%20pinned-8b949e?style=flat-square)](#compared-with-running-rust-anything-yourself)
-[![tools](https://img.shields.io/badge/MCP%20tools-22-6e7681?style=flat-square)](#the-22-tools)
+[![DSH](https://img.shields.io/badge/DSH-%3E%3D0.2.2--rc.5%20%3C0.3.0--0-2f6feb?style=flat-square)](#platforms-and-limitations)
+[![engine](https://img.shields.io/badge/engine-3.3.0%20pinned-8b949e?style=flat-square)](#differences-from-the-upstream-cli)
+[![tools](https://img.shields.io/badge/MCP%20tools-22-6e7681?style=flat-square)](#tools)
 [![license](https://img.shields.io/badge/license-MIT-2f6feb?style=flat-square)](LICENSE)
 
-<a href="#what-it-actually-does">What it does</a> ·
-<a href="#60-second-start">Start</a> ·
-<a href="#what-this-bundle-adds">What it adds</a> ·
-<a href="#compared-with-running-rust-anything-yourself">vs upstream</a> ·
-<a href="#read-the-proof">Proof</a> ·
-<a href="#the-22-tools">Tools</a> ·
+<a href="#what-the-plugin-provides">Overview</a> ·
+<a href="#installation">Installation</a> ·
+<a href="#what-the-plugin-adds">Adapter features</a> ·
+<a href="#differences-from-the-upstream-cli">vs upstream CLI</a> ·
+<a href="#reading-a-replay-result">Replay results</a> ·
+<a href="#tools">Tools</a> ·
 <a href="#approvals">Approvals</a> ·
-<a href="#platform-and-limits">Limits</a> ·
+<a href="#platforms-and-limitations">Limitations</a> ·
 <a href="README.zh-CN.md">简体中文</a>
 
 </div>
 
 ---
 
-## What it actually does
+## What the plugin provides
 
-[rust-anything](https://github.com/erkamyaman/rust-anything) is a porting engine: it reads a repository, picks the units worth rewriting, generates a Rust crate for one of them, and then replays cases it recorded from the *original* program against the Rust build. This bundle is the DeepSeek Harness front end for that engine. It adds no new powers over your files — it makes the engine callable as 22 typed tools and keeps the evidence attached to the work.
+rust-anything reads a repository, selects the units worth rewriting, generates a Rust crate for one of them, and replays cases recorded from the original program against the Rust build. This plugin exposes that workflow inside DeepSeek Harness as 22 MCP tools, so the agent calls the engine through typed schemas instead of shell commands.
 
-The loop the tools enforce:
-
-| Step | Tool | What you get |
+| Step | Tools | Output |
 |:--|:--|:--|
-| 1 | `analyze` / `map` | Units, port order, risks with `file:line`, and which bridge each unit needs. Read-only, no approval prompt. |
-| 2 | `record` | Cases captured by running the original program — inputs, outputs, exit codes, written files. |
-| 3 | `bridge` → `build` | A Rust crate with a real language bridge (napi, PyO3, C ABI, cgo, Fiddle, JNI, PHP FFI, P/Invoke). |
-| 4 | `diff` → `bench` → `gate` | Case-by-case comparison, speed on your workload, and the definition-of-done check. |
+| 1 | `analyze`, `map` | Units, port order, risks with `file:line`, and the bridge each unit requires. Read-only, no approval prompt. |
+| 2 | `record` | Cases captured by running the original program: inputs, outputs, exit codes, written files. |
+| 3 | `bridge`, `build` | A Rust crate with a language bridge (napi, PyO3, C ABI, cgo, Fiddle, JNI, PHP FFI, P/Invoke). |
+| 4 | `diff`, `bench`, `gate` | Case-by-case comparison, timing on the workload, and the definition-of-done check. |
 
-Nothing is declared ported because it compiled. A unit counts when its recorded cases match, `gate` passes, and `bench` shows it is not slower as its callers call it.
+A unit counts as ported when its recorded cases match, `gate` passes, and `bench` reports that it is not slower when called the way its callers call it. Compilation alone does not.
 
-**Who it is for:** you have a working program (or one hot path) in TypeScript/JavaScript, Python, C, Go, Ruby, Java, Kotlin, PHP or C#, and you want Rust without losing the behavior you already rely on.
+The plugin targets existing programs in TypeScript/JavaScript, Python, C, Go, Ruby, Java, Kotlin, PHP or C# whose current behaviour has to survive the rewrite.
 
-## 60-second start
+## Installation
 
-**1. Install the bundle** (stable **3.3.5**, engine **rust-anything 3.3.0**):
+**1. Install the bundle.** Stable plugin **3.3.5**, engine **rust-anything 3.3.0**.
 
 ```bash
 dsh plugin --profile "my-profile" add "file:C:/Downloads/dsh-rust-anything-3.3.5.tgz"
 ```
 
-Or install it from the plugin page in the GUI, or from the plugin market by name. Download the tarball from [Releases](https://github.com/lonyness/dsh-rust-anything/releases/latest).
+The same bundle can be installed from the plugin page in the GUI or from the plugin market. The tarball is on [Releases](https://github.com/lonyness/dsh-rust-anything/releases/latest).
 
-**2. Ask for something read-only first:**
+**2. Start with a read-only request.**
 
-> Analyze this repository with rust-anything. Give me the five units to port first, the risks, and the bridge each one needs. Do not modify any files.
+> Analyze this repository with rust-anything. List the five units to port first, the risks, and the bridge each one needs. Do not modify any files.
 
-`analyze` and `map` are the two tools allowed to run without an approval prompt, so this costs you nothing but tokens.
+`analyze` and `map` are the only tools without an approval prompt, which makes this a low-risk way to confirm that the bundle, the engine and the platform are wired correctly.
 
-**3. Then approve one build.** The first write (`bridge`, `record`, `build`, …) asks once. Approve that call and the rest of the loop is normal work.
+**3. Approve one write.** The first write operation (`bridge`, `record`, `build`, …) asks for approval. Approval covers that call only.
 
-## What this bundle adds
+## What the plugin adds
 
-The engine is the same; everything below is the adapter.
+The engine is unchanged. The following is the adapter layer around it.
 
-| Aspect | What it gives you |
+| Component | Behaviour |
 |:--|:--|
-| **Bundled engine** | Windows x64 ships the unmodified 3.3.0 executable, checksum pinned in `runtime/upstream-v3.3.0.json`. No install step, no PATH hunting, no runtime download. macOS and GNU Linux (x64/arm64) point at a binary you downloaded and verified yourself. |
-| **Typed tools, not flags** | 22 MCP tools with JSON Schemas, exposed as `mcp__rust-anything__*`. The agent reads the contract instead of recalling CLI syntax, and the same catalog validates every call. |
-| **Arguments checked before the prompt** | Anything wrong is refused before you are asked to approve: wrong types, unknown keys, missing required fields, bad enum values, and the traps the engine would silently reinterpret (see the comparison below). You get a refusal that names the field and the value, not a mystery result. |
-| **One approval per call** | Only `analyze` and `map` skip approval, and only because the engine itself marks them read-only. The other 20 ask once each. Under `never`, they are denied. |
-| **Sandbox-safe Cargo output** | Under Windows `workspace-write`, builds would otherwise write `%LOCALAPPDATA%\rust-anything\target` and be denied. The child process gets `CARGO_TARGET_DIR` inside the workspace instead — `<crate>/.rust-anything/target`, or `<project>/rust/.rust-anything/target` for composite calls. |
-| **A skill that matches the engine** | The bundled skill states what the pinned engine can actually do — nine languages, with the real limits (PHP bridges top-level functions only, PHP and C# have no `--batch`) — plus a [migration playbook](skills/rust-anything/playbook.md): compile-error triage (E0382, E0507, E0499, E0502, E0597, E0515, E0716, E0277), FFI and `unsafe` review, and crate/feature matching against your own `Cargo.toml`. |
-| **Evidence discipline in the prompt** | The injected guidance tells the agent to read `passed`/`total`/`skipped`/`failures`/`fallback` together, and that a `2/2` with a 100% fallback rate is not a Rust result. `fallback: null` means "not reported", never "0". |
-| **A release you can check** | `test/verify_release.py` compares the packed tarball against the npm publish list, byte-compares every member against git `HEAD`, then unpacks and runs the test suite. Three-platform CI does the same on every push. |
+| Bundled engine | Windows x64 ships the unmodified 3.3.0 executable. Its checksum is recorded in `runtime/upstream-v3.3.0.json`. There is no install step, no PATH lookup and no download at runtime. macOS and GNU Linux (x64/arm64) use a binary the user downloaded and verified. |
+| Typed tools | 22 MCP tools with JSON Schemas, exposed as `mcp__rust-anything__*`. The agent reads the contract instead of the CLI syntax, and the same catalog validates every call. |
+| Validation before approval | Wrong types, unknown keys, missing required fields, invalid enum values and the arguments the engine would silently reinterpret are refused before the approval prompt. The error names the field and the value it received. |
+| Approval boundary | Only `analyze` and `map` skip approval, because the engine marks them read-only. The remaining 20 tools ask once per call. Under `never`, they are denied. |
+| Cargo output inside the sandbox | Under Windows `workspace-write`, builds would otherwise write `%LOCALAPPDATA%\rust-anything\target` and be denied. The child process receives `CARGO_TARGET_DIR` inside the workspace: `<crate>/.rust-anything/target`, or `<project>/rust/.rust-anything/target` for composite calls. |
+| Skill aligned with the engine | The injected skill states what the pinned engine supports: nine languages with the real limits (PHP bridges top-level functions only; PHP and C# have no `--batch`). It also links a [migration playbook](skills/rust-anything/playbook.md) covering compile-error diagnosis (`E0382`, `E0507`, `E0499`, `E0502`, `E0597`, `E0515`, `E0716`, `E0277`), FFI and `unsafe` review, and crate/feature matching against the target's `Cargo.toml`. |
+| Replay guidance | The injected text requires `passed`, `total`, `skipped`, `failures` and `fallback` to be read together. A `2/2` at a 100% fallback rate is not a Rust result, and `fallback: null` means the build reported no rate, not that the rate is zero. |
+| Release verification | `test/verify_release.py` compares the tarball against the npm publish list, compares every member with git `HEAD`, then unpacks the package and runs its tests. CI performs the same check on three platforms. |
 
-## Compared with running rust-anything yourself
+## Differences from the upstream CLI
 
-Same engine, different surroundings. This is the honest list of what changes when the engine runs inside DSH:
+The engine behaves the same either way. The difference is the surrounding host.
 
-| Aspect | rust-anything CLI alone | This bundle inside DSH |
+| Aspect | Upstream CLI only | This plugin in DSH |
 |:--|:--|:--|
-| **Getting the engine** | Download per platform, unpack, keep on `PATH`, update by hand | Pinned 3.3.0 executable in the package (Windows x64), SHA-256 recorded; other platforms supply their own verified path via `DSH_RUST_ANYTHING_BIN` |
-| **Invoking it** | Remember 22 subcommands and their flags | 22 typed tools; the model reads schemas instead of guessing |
-| **Bad numbers** | `port: 70000` is dropped by `u16::try_from`, the HTTP request disappears, and recording silently falls back to CLI mode; `timeout: -5` becomes "no timeout given" and reverts to the configured 30 s; `pace: -5` keeps the old value | Refused before approval: `app_record.port: expected an integer from 1 to 65535, got 70000` |
-| **Empty `run`** | `strings("run")` on an empty list reuses the previously recorded command — you think you re-recorded `php other.php`, you re-recorded the old one | Refused: a non-empty argv array whose first item names the program, or omit `run` on purpose |
-| **Replay target** | `--build` passed where a string was expected is simply ignored by the engine; the run then replays through unit bindings and looks like a pass | Refused: `app_replay.build` must be one command-line string; a library must omit it |
-| **Permission** | Whatever your shell allows | Every call approved once, read-only pair excepted; `never` denies the writes |
-| **Windows build cache** | Writes outside the workspace, denied under `workspace-write` | `CARGO_TARGET_DIR` confined to the workspace |
-| **Version drift** | npm and auto-update can move the engine under you | No auto-update, no PATH search, no download at runtime — the pinned version is what runs |
-| **Telemetry** | — | None. The only network traffic is what your own build fetches. |
+| Obtaining the engine | Download per platform, unpack, keep on `PATH`, update manually | Pinned 3.3.0 executable in the package (Windows x64) with a recorded SHA-256; other platforms supply their own verified path through `DSH_RUST_ANYTHING_BIN` |
+| Invocation | 22 subcommands and their flags | 22 typed tools, described by schema |
+| Out-of-range numbers | `port: 70000` is dropped by `u16::try_from`, the HTTP request disappears and recording falls back to CLI mode; `timeout: -5` is read as "no timeout" and reverts to the configured 30 s; `pace: -5` keeps the previous value | Refused before approval: `app_record.port: expected an integer from 1 to 65535, got 70000` |
+| Empty `run` | An empty list passed to `strings("run")` reuses the previously recorded command, so the new argument is ignored without notice | Refused: either a non-empty argv array whose first item names the program, or `run` omitted deliberately |
+| Replay target | A non-string `--build` is ignored, the replay then runs through unit bindings, and the result looks like a pass | Refused: `app_replay.build` must be a single command-line string, and a library must omit it |
+| Permission | Whatever the shell permits | One approval per call, with the read-only pair excepted; `never` denies the writes |
+| Windows build cache | Writes outside the workspace, denied under `workspace-write` | `CARGO_TARGET_DIR` confined to the workspace |
+| Version drift | Package updates and auto-updates can change the engine without notice | No auto-update, no PATH search, no runtime download; the pinned version is what runs |
+| Telemetry | None | None; the only network traffic is what the build fetches |
 
-**What it deliberately does not change:** the engine's logic, its `SKILL.md` on disk (the two corrections happen at injection time, and [PROVENANCE](runtime/PROVENANCE.md) records both), your project files, or the promise that a finished port is behaviorally identical everywhere. It also will not upgrade the engine for you, even when a new one ships.
+Not changed by this plugin: the engine's logic, the `SKILL.md` bytes on disk (the two corrections are applied at injection time and both are recorded in [PROVENANCE](runtime/PROVENANCE.md)), the user's project files, and the engine version, which is not upgraded automatically. The plugin also does not guarantee that a completed port behaves identically in every environment; the recorded cases are the extent of the evidence.
 
-## Read the proof
+## Reading a replay result
 
 <div align="center">
   <img src="docs/media/replay.png" alt="app_replay report: Build ./stats_probe.exe, Passed 6/6, Every case matches" width="820">
 </div>
 
-That is the engine's own report from a real DSH session, rendered from the saved file ([source and hash](docs/media/PROVENANCE.md)). A replay result is five numbers, not one:
+The image is the engine's own report from a real DSH session, rendered from the saved file ([source and digest](docs/media/PROVENANCE.md)). A replay result consists of five values:
 
-- `passed` / `total` — cases that matched. `skipped` above zero means the run proved less than it looks.
-- `failures` — each entry names the case and the diff. One failure is a failed port, not a rounding error.
-- `fallback` — how much of the run was still answered by the original implementation. A `6/6` at a 100% fallback rate means the Rust code never ran. `null` means the build did not report it, which is not the same as `0`.
+- `passed` / `total`: matched cases. A non-zero `skipped` means the run covered fewer cases than the total suggests.
+- `failures`: each entry names the case and the difference. A single failure means the unit is not finished.
+- `fallback`: the share of the run still answered by the original implementation. A `6/6` at a 100% fallback rate means the Rust code did not execute. `null` means the build did not report a rate.
 
-## The 22 tools
+## Tools
 
 <details>
-<summary><b>Full tool list by phase</b></summary>
+<summary><b>All 22 tools by phase</b></summary>
 
 | Phase | Tools |
 |:--|:--|
-| Look — no approval prompt | `map`, `analyze` |
-| Plan | `profile`, `bridge`, `package` |
-| Record and prove | `record`, `refresh`, `build`, `diff`, `bench`, `gate`, `report` |
-| Switch a unit on or off | `shadow`, `enable`, `disable` |
-| Speed | `go`, `fuzz` |
-| Whole app | `app_record`, `app_replay`, `app_front_door`, `app_wire`, `app_lift` |
+| Inspection, no approval prompt | `map`, `analyze` |
+| Planning | `profile`, `bridge`, `package` |
+| Recording and verification | `record`, `refresh`, `build`, `diff`, `bench`, `gate`, `report` |
+| Switching a unit on or off | `shadow`, `enable`, `disable` |
+| Performance | `go`, `fuzz` |
+| Whole application | `app_record`, `app_replay`, `app_front_door`, `app_wire`, `app_lift` |
 
-`rust_anything_prompt` is a read-only helper that returns the engine's own migration prompt.
+`rust_anything_prompt` is a read-only helper that returns the engine's migration prompt.
 
 </details>
 
 ## Approvals
 
-- `analyze` and `map` need no approval, because the engine advertises them with `readOnlyHint: true`, `destructiveHint: false`, `openWorldHint: false`.
-- Every other call asks once, with the exact arguments. An approved call is not a standing permission.
-- Nothing here bypasses the host: a denied tool stays denied. Restarting the loop through a terminal, `force`, or a skipped gate is not a workaround, and the skill says so.
-- A refusal that names a field is the adapter doing its job — fix the argument rather than retrying.
+- `analyze` and `map` require no approval. The engine advertises them with `readOnlyHint: true`, `destructiveHint: false`, `openWorldHint: false`.
+- Every other tool requires one approval per call, including the arguments.
+- The plugin does not bypass host policy. A denied call remains denied; re-running it through a terminal, with `force`, or with the gate skipped is not a substitute.
+- An error that names a field comes from the adapter's validation. The correct response is to change the argument.
 
-## Platform and limits
+## Platforms and limitations
 
 | Platform | Engine |
 |:--|:--|
-| Windows x64 | Bundled. `DSH_RUST_ANYTHING_BIN` is ignored here on purpose, so the shipped executable is the one that runs. |
-| macOS / GNU Linux, x64 or arm64 | Supply your own: download the `v3.3.0` asset from the [upstream release](https://github.com/erkamyaman/rust-anything/releases/tag/v3.3.0), verify it against `SHA256SUMS`, and set `DSH_RUST_ANYTHING_BIN` to its absolute path. If you build from source instead, expect `--version` to print `rust-anything 3.3.0`. |
+| Windows x64 | Bundled. `DSH_RUST_ANYTHING_BIN` is deliberately ignored so that the shipped executable is the one that runs. |
+| macOS / GNU Linux, x64 or arm64 | Supplied by the user: download the `v3.3.0` asset from the [upstream release](https://github.com/erkamyaman/rust-anything/releases/tag/v3.3.0), verify it against `SHA256SUMS`, and set `DSH_RUST_ANYTHING_BIN` to its absolute path. When building from source instead, `--version` must print `rust-anything 3.3.0`. |
 
-Known limits, stated plainly:
+Known limitations:
 
-- **Writes need a permissive sandbox.** On Windows use `/permission workspace-write`, otherwise builds and gates fail on the engine's cache directory.
-- **Python units need a working interpreter.** `record` and `go` probe `python3`, then `python`. On a machine where `python` is the Windows Store stub you get `9009`; the adapter reports that, and you can pass an absolute interpreter as `app_record.run[0]`.
-- **Dependency downloads can fail behind a proxy.** A build that reports `SEC_E_NO_CREDENTIALS` needs network or proxy configuration. Do not "fix" it by disabling TLS verification — the adapter will not do that for you.
-- **Large repositories are bounded on purpose.** Four host variables tune the bridge without reopening the compiler to unbounded work:
+- Write operations require a permissive sandbox. On Windows, use `/permission workspace-write`; otherwise builds and gates fail when the engine writes its cache.
+- Python units require a working interpreter. `record` and `go` try `python3`, then `python`. When `python` is the Microsoft Store stub, the call fails with `9009`; the adapter reports this, and an absolute interpreter path can be supplied as `app_record.run[0]`.
+- Dependency downloads can fail behind a proxy. A build reporting `SEC_E_NO_CREDENTIALS` needs network or proxy configuration; disabling TLS verification is not an acceptable fix and the adapter does not do it.
+- Large repositories are bounded. Four host variables set the limits:
 
 | Variable | Default | Range |
 |:--|--:|:--|
@@ -153,18 +153,18 @@ Known limits, stated plainly:
 | `DSH_RUST_ANYTHING_STDOUT_MAX_BYTES` | 16777216 | 1 – 67108864 |
 | `DSH_RUST_ANYTHING_STDERR_MAX_BYTES` | 8192 | 1 – 65536 |
 
-Confirmed by this repository's CI: the bundled engine reproduces Unicode behavior exactly (a case with `é🦀` yields 2 in the original and 6 in a byte-shifted reimplementation — the report names the difference instead of hiding it). Build and replay are tested end to end for TypeScript, Python and C; the other six languages are analyzed and bridged with real output, but their toolchains were not available in CI.
+Coverage in this repository's CI: the bundled engine reproduces Unicode behaviour exactly (a case containing `é🦀` returns 2 in the original and 6 in a byte-oriented implementation, and the report names the difference). Build and replay are verified end to end for TypeScript, Python and C. The remaining six languages are verified for analysis and bridge generation only, because their toolchains are not present in CI.
 
-## Verify the download
+## Verifying a release
 
 ```bash
 python test/verify_release.py <upstream-v3.3.0-assets-dir> --tgz dsh-rust-anything-3.3.5.tgz
 ```
 
-It checks the official upstream checksums, then that the tarball contains exactly the npm publish list, with every member byte-identical to git `HEAD`, and finally that the unpacked package passes `node --test test/*.test.cjs`. `--self-check` proves the checker itself accepts a correct set and rejects a tampered, extra or missing member. Contributing: `npm test` (Node 22.14+, Rust toolchain) — see [runtime/PROVENANCE.md](runtime/PROVENANCE.md#maintainer-release-gate-from-the-checkout).
+The script checks the official upstream checksums, then that the archive contains exactly the npm publish list with every member byte-identical to git `HEAD`, and finally that the unpacked package passes `node --test test/*.test.cjs`. `--self-check` verifies that the checker itself accepts a correct member set and rejects tampered, extra and missing members. Development requires `npm test` (Node 22.14+ and a Rust toolchain); see [runtime/PROVENANCE.md](runtime/PROVENANCE.md#maintainer-release-gate-from-the-checkout).
 
-## Docs
+## Documentation
 
 [Playbook](skills/rust-anything/playbook.md) · [Chinese acceptance scenarios](docs/acceptance-zh.md) · [Engine skill](skills/rust-anything/SKILL.md) · [Whole-app guide](skills/rust-anything/whole-app.md) · [Details](docs/DETAIL.md) · [Changelog](CHANGELOG.md) · [Tests](test/parity.test.cjs)
 
-MIT licensed, matching the upstream engine. Unofficial integration: not affiliated with or endorsed by the rust-anything project. Remove with `dsh plugin --profile "my-profile" remove dsh-rust-anything`; nothing outside the bundle's directory is written except Cargo output under the workspace.
+MIT licensed, as is the upstream engine. This is an unofficial integration: it is not affiliated with the rust-anything project and carries no endorsement from it. Removal: `dsh plugin --profile "my-profile" remove dsh-rust-anything`. Nothing outside the plugin directory is written, except Cargo output inside the workspace.
